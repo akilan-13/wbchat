@@ -1,0 +1,421 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\WhatsappContactModel;
+use App\Models\WhatsappMessageModel;
+use App\Events\NewMessage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http; // Import Http facade
+use Carbon\Carbon;
+
+class WhatsAppConfig extends Controller
+{
+   
+public function receiveWhatsAppMessageold(Request $request)
+{
+    // Log::info('Incoming WhatsApp Message Request:', $request->all());
+    // Handle verification challenge
+    if ($request->method() === 'GET') {
+        $mode = $request->query('hub_mode');
+        $token = $request->query('hub_verify_token');
+        $challenge = $request->query('hub_challenge');
+
+        if ($mode === 'subscribe' && $token === env('WHATSAPP_VERIFY_TOKEN')) {
+            return response($challenge, 200); // Return hub.challenge
+        }
+        return response()->json(['error' => 'Verification failed'], 403);
+    }
+
+    // Log::info('Received POST request data: ', $request->all());
+    // Process message data
+    $entry = $request->json('entry');
+    if (empty($entry)) {
+        return response()->json(['message' => 'Invalid data format'], 400);
+    }
+
+    $messageData = $entry[0]['changes'][0]['value']['messages'][0] ?? null;
+    $contactData = $entry[0]['changes'][0]['value']['contacts'][0] ?? null;
+
+    if (!$messageData || !$contactData) {
+        return response()->json(['message' => 'No message received'], 400);
+    }
+
+    $phone = $contactData['wa_id'];
+    $messageText = $messageData['text']['body'] ?? null;
+    $messageType = $messageData['type'] ?? 'text';
+    $messageTimestamp = $messageData['timestamp'] ?? null;
+    
+    if (!$messageTimestamp) {
+        return response()->json(['message' => 'Missing message timestamp'], 400);
+    }
+    $messageDateTime = Carbon::createFromTimestamp($messageTimestamp)->toDateTimeString();
+    
+    // Log::info("Message received from {$phone}: {$messageText}");
+
+    // Save to database
+   $contact = WhatsappContactModel::where('phone', $phone)->first();
+
+    if ($contact) {
+        $contact->increment('msg_count');
+    } else {
+        $contact = WhatsappContactModel::create([
+            'phone' => $phone,
+            'msg_count' => 1, 
+        ]);
+    }
+
+    $message = WhatsappMessageModel::create([
+        'contact_id' => $contact->sno,
+        'message' => $messageText,
+        'type' => $messageType,
+        'from' => 0,
+    ]);
+
+    // Broadcast event with proper formatting
+    event(new NewMessage($message, $entry));
+
+    return response()->json(['success' => true]);
+}
+
+
+public function receiveWhatsAppMessage(Request $request)
+{
+        // Log::info('Incoming WhatsApp Webhook Request recent:', $request->all());
+    
+        $accessToken = 'EAAFb1ehfWDIBO3IxRjM766z6Hyx00dC8MzmepCI5QZC30BjNU4z72nwDmegzVtxZBQKv1o0iyD7HduA4PUtPiA1iZBJvFAcntx2wSiJFU69VKWZBevCW3B0Dbai0RZB4gKFM6ZBycwnD5VUCKL3jTea95GTLBGgGTYm07ihWVngg750IBWeZB7nubdG6Lov4bbdnwZDZD'; // Update with a valid token
+    
+      // Handle verification challenge
+        if ($request->method() === 'GET') {
+            $mode = $request->query('hub_mode');
+            $token = $request->query('hub_verify_token');
+            $challenge = $request->query('hub_challenge');
+    
+            if ($mode === 'subscribe' && $token === env('WHATSAPP_VERIFY_TOKEN')) {
+                return response($challenge, 200); // Return hub.challenge
+            }
+            return response()->json(['error' => 'Verification failed'], 403);
+        }
+    
+    Log::info('Incoming WhatsApp Webhook Data:', ['data' => $request->all()]);
+
+     Log::info('Received POST request data: ', $request->all());
+
+    $entry = $request->json('entry');
+    if (empty($entry)) {
+        return response()->json(['message' => 'Invalid data format'], 400);
+    }
+
+    $changes = $entry[0]['changes'][0]['value'] ?? null;
+    if (!$changes) {
+        return response()->json(['message' => 'No changes found'], 400);
+    }
+
+    // Handle message statuses
+    if (isset($changes['statuses'])) {
+        foreach ($changes['statuses'] as $status) {
+            $messageId = $status['id'] ?? null;
+            $statusType = $status['status'] ?? null;
+
+            if ($messageId && $statusType) {
+                WhatsappMessageModel::where('wama_id', $messageId)->update(['message_status' => $statusType]);
+                Log::info("Message status updated: ID {$messageId} -> {$statusType}");
+                
+            }
+        }
+        return response()->json(['success' => true]);
+    }
+
+    // Handle received messages (including from Meta Dashboard)
+    $messageData = $changes['messages'][0] ?? null;
+    $contactData = $changes['contacts'][0] ?? null;
+
+    if (!$messageData || !$contactData) {
+        return response()->json(['message' => 'No message received'], 400);
+    }
+
+    $phone = $contactData['wa_id'];
+    $messageType = $messageData['type'] ?? 'text';
+    $messageId = $messageData['id'] ?? null;
+    $messageStatus = $messageData['status'] ?? 'sent';
+    $messageText = $messageType === 'text' ? $messageData['text']['body'] : null;
+
+    $messageTimestamp = $messageData['timestamp'] ?? null;
+
+    if (!$messageTimestamp) {
+        return response()->json(['message' => 'Missing message timestamp'], 400);
+    }
+    $messageDateTime = Carbon::createFromTimestamp($messageTimestamp)->toDateTimeString();
+
+    // Save to database
+    $contact = WhatsappContactModel::where('phone', $phone)->first();
+
+    if ($contact) {
+        $contact->increment('msg_count');
+    } else {
+        $contact = WhatsappContactModel::create([
+            'phone' => $phone,
+            'msg_count' => 1,
+        ]);
+    }
+
+    // Prepare data for saving the message
+    $messageDataToSave = [
+        'contact_id' => $contact->sno,
+        'message' => $messageText,
+        'type' => $messageType,
+        'from' => 0,
+        'wama_id' => $messageId,
+        'message_status' => $messageStatus,
+    ];
+     Log::info('Received wb datas request data: ', $messageData);
+        // Handling media files (images, videos, documents, etc.)
+       if (in_array($messageType, ['image', 'video', 'document', 'audio', 'sticker'])) {
+            $mediaId = $messageData[$messageType]['id'] ?? null;
+        
+            if ($mediaId) {
+                // Get media URL
+                $mediaUrlResponse = Http::withHeaders([
+                    'Authorization' => "Bearer $accessToken"
+                ])->get("https://graph.facebook.com/v19.0/{$mediaId}");
+        
+                $mediaUrl = $mediaUrlResponse->json()['url'] ?? null;
+        
+                if ($mediaUrl) {
+                    // Get media file content
+                    $mediaContentResponse = Http::withHeaders([
+                        'Authorization' => "Bearer $accessToken"
+                    ])->get($mediaUrl);
+        
+                    if ($mediaContentResponse->successful()) {
+                        $mimeType = $mediaContentResponse->header('Content-Type');
+                        $extension = $this->getMediaExtension($mimeType);
+                        $mediaFolder = $this->getMediaFolder($messageType);
+        
+                        // Ensure directory exists
+                        $filePath = public_path("whatsapp/{$mediaFolder}");
+                        if (!file_exists($filePath)) {
+                            mkdir($filePath, 0777, true);
+                        }
+        
+                        // Generate unique filename based on extension
+                        $fileName = uniqid() . '.' . $extension;
+                        file_put_contents("$filePath/$fileName", $mediaContentResponse->body());
+        
+                        // Store media details in message data
+                        $messageDataToSave['media_url'] = "whatsapp/{$mediaFolder}/{$fileName}";
+                        $messageDataToSave['media_type'] = $messageType;
+                        $messageDataToSave['mime_type'] = $mimeType;
+        
+                        // Store caption or filename for documents
+                        if ($messageType === 'document') {
+                            $messageDataToSave['media_caption'] = $messageData[$messageType]['filename'] ?? null;
+                        } else {
+                            $messageDataToSave['media_caption'] = $messageData[$messageType]['caption'] ?? null;
+                        }
+                    }
+                }
+            }
+        }
+
+
+    // Save message record in the database
+    $message = WhatsappMessageModel::create($messageDataToSave);
+    event(new NewMessage($message, $entry));
+
+    return response()->json(['success' => true]);
+}
+
+
+public function handleWebhookold(Request $request)
+{
+    // Log::info('Incoming WhatsApp Webhook Request recent:', $request->all());
+    
+        $accessToken = 'EAASwZChdZBMwUBOZBi49HuYwwn5Nol5W50dTdvOHv5Qys7sq6Jn0ZAU3jHVFdoTmycmF0f2XlQU1co2zBbWLMpgZBiGGJJsL0oEckfKdWW1lDyLKtwXvHKRjRgli2ZAZCFbkcIPaJLVxzKY8bycqrTBm0HBY5c3yp2Qj3gQ6cuZCfFxhgq4OmShon1sTNhKhjKXkonoOgiRNT8YtZBtHbO8y5jAzqNEkbR60i2mR2NE0sooMZD'; // Update with a valid token
+    
+ // Handle verification challenge
+    if ($request->isMethod('get')) {
+        $mode = $request->query('hub_mode');
+        $verifyToken = $request->query('hub_verify_token');
+        $challenge = $request->query('hub_challenge');
+
+        if ($mode === 'subscribe' && $verifyToken === 'secret2025tokkentest45') {
+            return response($challenge);
+        }
+
+        return response()->json(['error' => 'Invalid token'], 403);
+    }
+    
+    Log::info('Incoming WhatsApp Webhook Data:', ['data' => $request->all()]);
+
+     Log::info('Received POST request data: ', $request->all());
+
+    $entry = $request->json('entry');
+    if (empty($entry)) {
+        return response()->json(['message' => 'Invalid data format'], 400);
+    }
+
+    $changes = $entry[0]['changes'][0]['value'] ?? null;
+    if (!$changes) {
+        return response()->json(['message' => 'No changes found'], 400);
+    }
+
+    // Handle message statuses
+    if (isset($changes['statuses'])) {
+        foreach ($changes['statuses'] as $status) {
+            $messageId = $status['id'] ?? null;
+            $statusType = $status['status'] ?? null;
+
+            if ($messageId && $statusType) {
+                WhatsappMessageModel::where('wama_id', $messageId)->update(['message_status' => $statusType]);
+                // Log::info("Message status updated: ID {$messageId} -> {$statusType}");
+            }
+        }
+        return response()->json(['success' => true]);
+    }
+
+    // Handle received messages (including from Meta Dashboard)
+    $messageData = $changes['messages'][0] ?? null;
+    $contactData = $changes['contacts'][0] ?? null;
+
+    if (!$messageData || !$contactData) {
+        return response()->json(['message' => 'No message received'], 400);
+    }
+
+    $phone = $contactData['wa_id'];
+    $messageType = $messageData['type'] ?? 'text';
+    $messageId = $messageData['id'] ?? null;
+    $messageStatus = $messageData['status'] ?? 'sent';
+    $messageText = $messageType === 'text' ? $messageData['text']['body'] : null;
+
+    $messageTimestamp = $messageData['timestamp'] ?? null;
+
+    if (!$messageTimestamp) {
+        return response()->json(['message' => 'Missing message timestamp'], 400);
+    }
+    $messageDateTime = Carbon::createFromTimestamp($messageTimestamp)->toDateTimeString();
+
+    // Save to database
+    $contact = WhatsappContactModel::where('phone', $phone)->first();
+
+    if ($contact) {
+        $contact->increment('msg_count');
+    } else {
+        $contact = WhatsappContactModel::create([
+            'phone' => $phone,
+            'msg_count' => 1,
+        ]);
+    }
+
+    // Prepare data for saving the message
+    $messageDataToSave = [
+        'contact_id' => $contact->sno,
+        'message' => $messageText,
+        'type' => $messageType,
+        'from' => 0,
+        'wama_id' => $messageId,
+        'message_status' => $messageStatus,
+    ];
+     Log::info('Received wb datas request data: ', $messageData);
+        // Handling media files (images, videos, documents, etc.)
+       if (in_array($messageType, ['image', 'video', 'document', 'audio', 'sticker'])) {
+            $mediaId = $messageData[$messageType]['id'] ?? null;
+        
+            if ($mediaId) {
+                // Get media URL
+                $mediaUrlResponse = Http::withHeaders([
+                    'Authorization' => "Bearer $accessToken"
+                ])->get("https://graph.facebook.com/v19.0/{$mediaId}");
+        
+                $mediaUrl = $mediaUrlResponse->json()['url'] ?? null;
+        
+                if ($mediaUrl) {
+                    // Get media file content
+                    $mediaContentResponse = Http::withHeaders([
+                        'Authorization' => "Bearer $accessToken"
+                    ])->get($mediaUrl);
+        
+                    if ($mediaContentResponse->successful()) {
+                        $mimeType = $mediaContentResponse->header('Content-Type');
+                        $extension = $this->getMediaExtension($mimeType);
+                        $mediaFolder = $this->getMediaFolder($messageType);
+        
+                        // Ensure directory exists
+                        $filePath = public_path("whatsapp/{$mediaFolder}");
+                        if (!file_exists($filePath)) {
+                            mkdir($filePath, 0777, true);
+                        }
+        
+                        // Generate unique filename based on extension
+                        $fileName = uniqid() . '.' . $extension;
+                        file_put_contents("$filePath/$fileName", $mediaContentResponse->body());
+        
+                        // Store media details in message data
+                        $messageDataToSave['media_url'] = "whatsapp/{$mediaFolder}/{$fileName}";
+                        $messageDataToSave['media_type'] = $messageType;
+                        $messageDataToSave['mime_type'] = $mimeType;
+        
+                        // Store caption or filename for documents
+                        if ($messageType === 'document') {
+                            $messageDataToSave['media_caption'] = $messageData[$messageType]['filename'] ?? null;
+                        } else {
+                            $messageDataToSave['media_caption'] = $messageData[$messageType]['caption'] ?? null;
+                        }
+                    }
+                }
+            }
+        }
+
+
+    // Save message record in the database
+    $message = WhatsappMessageModel::create($messageDataToSave);
+    event(new NewMessage($message, $entry));
+
+    return response()->json(['success' => true]);
+}
+
+
+  private function getMediaExtension($mimeType)
+{
+    $mimeMap = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        'video/mp4' => 'mp4',
+        'video/avi' => 'avi',
+        'video/3gpp' => '3gp',
+        'audio/mpeg' => 'mp3',
+        'audio/ogg' => 'ogg',
+        'audio/wav' => 'wav',
+        'audio/webm' => 'webm',
+        'application/pdf' => 'pdf',
+        'application/msword' => 'doc',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+        'application/vnd.ms-excel' => 'xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+        'application/zip' => 'zip',
+        'application/x-rar-compressed' => 'rar',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
+    ];
+
+    return $mimeMap[$mimeType] ?? 'bin'; // Default to 'bin' if no match
+}
+    
+    /**
+     * Get media folder based on type.
+     */
+    private function getMediaFolder($messageType)
+    {
+        return match ($messageType) {
+            'image' => 'images',
+            'video' => 'videos',
+            'document' => 'documents',
+            'audio' => 'audios',
+            'sticker' => 'stickers',
+            default => 'other',
+        };
+    }
+
+}
