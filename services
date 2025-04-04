@@ -1,0 +1,141 @@
+<?php
+
+namespace App\Services;
+
+use Carbon\Carbon;
+use App\Models\WhatsappMessageModel;
+use App\Models\WhatsappContactModel;
+use GuzzleHttp\Client;
+
+class WhatsAppSessionManager
+{
+    private $phoneNumberId = '437594702776125'; // Your WhatsApp Business API phone number ID
+    private $accessToken = 'EAAFb1ehfWDIBO3IxRjM766z6Hyx00dC8MzmepCI5QZC30BjNU4z72nwDmegzVtxZBQKv1o0iyD7HduA4PUtPiA1iZBJvFAcntx2wSiJFU69VKWZBevCW3B0Dbai0RZB4gKFM6ZBycwnD5VUCKL3jTea95GTLBGgGTYm07ihWVngg750IBWeZB7nubdG6Lov4bbdnwZDZD'; // Your valid access token
+    private $client;
+
+    public function __construct()
+    {
+        $this->client = new Client();
+    }
+
+    /**
+     * Check if session is expired for a given phone number.
+     */
+    public function isSessionExpired($phone)
+    {
+        $contact = WhatsappContactModel::where('phone', $phone)->first();
+
+        if (!$contact) {
+            return true; // No contact found, assume session is expired
+        }
+
+        $lastMessage = $contact->messages()
+            ->where('from', 1) // Messages sent by the business
+            ->latest('message_date_time')
+            ->first();
+
+        if (!$lastMessage) {
+            return true; // No message history, assume session is expired
+        }
+
+        $lastSentTime = Carbon::parse($lastMessage->message_date_time);
+        return $lastSentTime->diffInHours(Carbon::now()) > 23; // If older than 23 hours, refresh session
+    }
+
+    public function reopenSession($phone)
+    {
+        $maxRetries = 3;
+        $retryDelay = 2; // Seconds
+    
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            $payload = [
+                'messaging_product' => 'whatsapp',
+                'to' => '+' . $phone,
+                'type' => 'text',
+                'text' => [
+                    'body' => '.' // Smallest possible text (checkmark)
+                ]
+            ];
+    
+            try {
+                $response = $this->client->post("https://graph.facebook.com/v17.0/{$this->phoneNumberId}/messages", [
+                    'json' => $payload,
+                    'headers' => [
+                        'Authorization' => "Bearer {$this->accessToken}",
+                        'Content-Type' => 'application/json',
+                    ]
+                ]);
+    
+                $result = json_decode($response->getBody(), true);
+                
+                if (isset($result['messages'][0]['id'])) {
+                    // Send a delete request immediately after sending the message
+                    $this->deleteMessage($result['messages'][0]['id']);
+                    return true; // Session reopened successfully
+                }
+    
+            } catch (\Exception $e) {
+                sleep($retryDelay); // Wait before retrying
+            }
+        }
+    
+        return false; // Failed after max retries
+    }
+    
+    private function deleteMessage($messageId)
+    {
+        try {
+            $this->client->delete("https://graph.facebook.com/v17.0/{$messageId}", [
+                'headers' => [
+                    'Authorization' => "Bearer {$this->accessToken}",
+                    'Content-Type' => 'application/json',
+                ]
+            ]);
+        } catch (\Exception $e) {
+            // Ignore errors
+        }
+    }
+
+    /**
+     * Automatically handle session reopening before sending a new message.
+     */
+    public function sendMessage($phone, $messageText)
+    {
+        if ($this->isSessionExpired($phone)) {
+            $success = $this->reopenSession($phone);
+            if (!$success) {
+                return ['error' => 'Failed to reopen session after multiple attempts'];
+            }
+            sleep(2); // Wait 2 seconds for session reopening
+        }
+
+        return $this->sendWhatsAppMessage($phone, $messageText);
+    }
+
+    /**
+     * Send the actual WhatsApp message.
+     */
+    private function sendWhatsAppMessage($phone, $messageText)
+    {
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => '+' . $phone,
+            'text' => ['body' => $messageText]
+        ];
+
+        try {
+            $response = $this->client->post("https://graph.facebook.com/v17.0/{$this->phoneNumberId}/messages", [
+                'json' => $payload,
+                'headers' => [
+                    'Authorization' => "Bearer {$this->accessToken}",
+                    'Content-Type' => 'application/json',
+                ]
+            ]);
+
+            return json_decode($response->getBody(), true);
+
+        } catch (\Exception $e) {
+            return ['error' => 'Message sending failed'];
+        }
+    }
+}
