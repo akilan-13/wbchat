@@ -1,0 +1,349 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\WhatsappContactModel;
+use App\Models\WhatsappMessageModel;
+use App\Events\NewMessage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Client;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use App\Services\WhatsAppSessionManager;
+
+
+class WhatsAppWebhookController extends Controller
+{
+    protected $whatsAppConfig;
+
+    public function __construct(WhatsAppConfig $whatsAppConfig)
+    {
+        $this->whatsAppConfig = $whatsAppConfig;
+    }
+
+    // Display chat UI
+    public function index()
+    {
+        $contacts = WhatsappContactModel::with('messages')->get();
+        $this->reopenSessions();
+        return view('content.whatsapp_chat.whatsapp_chat', compact('contacts'));
+
+    }
+    
+    public function CustomerChat()
+    {
+        $contacts = WhatsappContactModel::with('messages')->get();
+        return view('content.whatsapp_chat.whatsapp_chat_customer', compact('contacts'));
+    }
+
+    public function UnknownChat()
+    {
+        $contacts = WhatsappContactModel::with('messages')->get();
+        return view('content.whatsapp_chat.whatsapp_chat_unknown', compact('contacts'));
+    }
+
+    public function getContactsWithLastMessage(Request $request)
+    {
+        $branch_id = $request->user()->branch_id;
+        $user_id = $request->user()->user_id;
+        // Subquery to get the latest message for each contact
+       $subQuery = DB::table('za_wb_messages')
+            ->select('contact_id', DB::raw('MAX(sno) as last_message_sno'))
+            ->where('status',0)
+            ->groupBy('contact_id');
+
+        // Main query to get contacts with their latest message
+        $contacts = WhatsappContactModel::leftJoin('za_wb_messages', function ($join) use ($subQuery) {
+            $join->on('za_wb_messages.contact_id', '=', 'za_wb_contacts.sno')
+                ->whereIn('za_wb_messages.sno', function($query) use ($subQuery) {
+                    $query->select('last_message_sno')
+                          ->fromSub($subQuery, 'sub');
+                });
+        })
+        ->leftJoin('za_lead', DB::raw("RIGHT(za_wb_contacts.phone, 10)"), '=', 'za_lead.lead_mobile') // Match last 10 digits
+        ->whereNotIn('za_lead.status',[10,4])
+        ->where('za_lead.branch_id',$branch_id)
+        ->where('za_wb_messages.status',0)
+        ->select('za_wb_contacts.*', 'za_wb_messages.message as last_message','za_wb_messages.media_caption','za_wb_messages.type', 'za_wb_messages.message_date_time as last_message_time','za_lead.lead_name','za_lead.status as lead_status');
+        
+        if (auth()->user()->hasPermissionradio('Sales Management', 'Manage Lead', 'view_self_lead')) {
+            $contacts = $contacts->where('za_lead.created_by', $user_id);
+        } elseif (auth()->user()->hasPermissionradio('Sales Management', 'Manage Lead', 'global_lead')) {
+            $contacts = $contacts;
+        } else {
+            abort(403, 'Unauthorized');
+        }
+        $contacts=$contacts->orderBy('za_wb_messages.sno','desc')->get();
+
+        return response()->json($contacts);
+    }
+
+    public function getContactsWithLastMessage_customer(Request $request)
+    {
+        $branch_id = $request->user()->branch_id;
+        $user_id = $request->user()->user_id;
+        // Subquery to get the latest message for each contact
+       $subQuery = DB::table('za_wb_messages')
+            ->select('contact_id', DB::raw('MAX(sno) as last_message_sno'))
+            ->groupBy('contact_id');
+
+        // Main query to get contacts with their latest message
+        $contacts = WhatsappContactModel::leftJoin('za_wb_messages', function ($join) use ($subQuery) {
+            $join->on('za_wb_messages.contact_id', '=', 'za_wb_contacts.sno')
+                ->whereIn('za_wb_messages.sno', function($query) use ($subQuery) {
+                    $query->select('last_message_sno')
+                          ->fromSub($subQuery, 'sub');
+                });
+        })
+        ->leftJoin('za_lead', DB::raw("RIGHT(za_wb_contacts.phone, 10)"), '=', 'za_lead.lead_mobile') // Match last 10 digits
+        ->whereIn('za_lead.status',[10,4])
+        ->where('za_lead.branch_id',$branch_id)
+        ->select('za_wb_contacts.*', 'za_wb_messages.message as last_message','za_wb_messages.media_caption','za_wb_messages.type', 'za_wb_messages.message_date_time as last_message_time','za_lead.lead_name','za_lead.status as lead_status');
+
+        if (auth()->user()->hasPermissionradio('Sales Management', 'Manage Lead', 'view_self_lead')) {
+            $contacts = $contacts->where('za_lead.created_by', $user_id);
+        } elseif (auth()->user()->hasPermissionradio('Sales Management', 'Manage Lead', 'global_lead')) {
+            $contacts = $contacts;
+        } else {
+            abort(403, 'Unauthorized');
+        }
+        $contacts=$contacts->orderBy('za_wb_messages.sno','desc')->get();
+
+        return response()->json($contacts);
+    }
+
+    // public function getContactsWithLastMessage_unknown(Request $request)
+    // {
+    //     $branch_id = $request->user()->branch_id;
+    //     $user_id = $request->user()->user_id;
+    //     // Subquery to get the latest message for each contact
+    //     $subQuery = DB::table('za_wb_messages')
+    //     ->select('contact_id', DB::raw('MAX(message_date_time) as last_message_time'))
+    //     ->groupBy('contact_id');
+
+    //     // Main query to get contacts with their latest message
+    //     $contacts = WhatsappContactModel::leftJoin('za_wb_messages', function ($join) use ($subQuery) {
+    //         $join->on('za_wb_messages.contact_id', '=', 'za_wb_contacts.sno')
+    //             ->whereRaw('za_wb_messages.message_date_time = (select last_message_time from (' . $subQuery->toSql() . ') as sub where sub.contact_id = za_wb_messages.contact_id)');
+    //     })
+    //     ->leftJoin('za_lead', DB::raw("RIGHT(za_wb_contacts.phone, 10)"), '=', 'za_lead.lead_mobile') // Match last 10 digits
+    //     ->whereNull('za_lead.sno')
+    //     ->distinct('za_wb_contacts.sno')
+    //     ->select('za_wb_contacts.sno','za_wb_contacts.phone', 'za_wb_messages.message as last_message','za_wb_messages.media_caption','za_wb_messages.type', 'za_wb_messages.message_date_time as last_message_time','za_lead.lead_name','za_lead.status as lead_status');
+
+    //     if (auth()->user()->hasPermissionradio('Sales Management', 'Manage Lead', 'view_self_lead')) {
+    //         $contacts = $contacts->where('za_lead.created_by', $user_id);
+    //     } elseif (auth()->user()->hasPermissionradio('Sales Management', 'Manage Lead', 'global_lead')) {
+    //         $contacts = $contacts;
+    //     } else {
+    //         abort(403, 'Unauthorized');
+    //     }
+    //     $contacts=$contacts->groupBy('za_wb_contacts.sno','za_wb_contacts.phone', 'za_wb_messages.message','za_wb_messages.media_caption','za_wb_messages.type', 'za_wb_messages.message_date_time','za_lead.lead_name','za_lead.status')->orderBy('za_wb_messages.sno','desc')->get();
+
+    //     return response()->json($contacts);
+    // }
+    
+     public function getContactsWithLastMessage_unknown(Request $request)
+    {
+        $branch_id = $request->user()->branch_id;
+        $user_id = $request->user()->user_id;
+    
+        // Subquery to get the latest message's sno for each contact
+        $subQuery = DB::table('za_wb_messages')
+            ->select('contact_id', DB::raw('MAX(sno) as last_message_sno'))
+            ->groupBy('contact_id');
+    
+        // Main query to get contacts with their latest message
+        $contacts = WhatsappContactModel::leftJoin('za_wb_messages', function ($join) use ($subQuery) {
+            $join->on('za_wb_messages.contact_id', '=', 'za_wb_contacts.sno')
+                ->whereIn('za_wb_messages.sno', function($query) use ($subQuery) {
+                    $query->select('last_message_sno')
+                          ->fromSub($subQuery, 'sub');
+                });
+        })
+        ->leftJoin('za_lead', DB::raw("RIGHT(za_wb_contacts.phone, 10)"), '=', 'za_lead.lead_mobile') // Match last 10 digits
+        ->whereNull('za_lead.sno')
+        ->select('za_wb_contacts.sno','za_wb_contacts.phone', 'za_wb_messages.message as last_message','za_wb_messages.media_caption','za_wb_messages.type', 'za_wb_messages.message_date_time as last_message_time','za_lead.lead_name','za_lead.status as lead_status');
+    
+        // Apply permission filters
+        if (auth()->user()->hasPermissionradio('Sales Management', 'Manage Lead', 'view_self_lead')) {
+            $contacts = $contacts->where('za_lead.created_by', $user_id);
+        } elseif (auth()->user()->hasPermissionradio('Sales Management', 'Manage Lead', 'global_lead')) {
+            $contacts = $contacts;
+        } else {
+            abort(403, 'Unauthorized');
+        }
+    
+        // Group the results to ensure no duplicates
+        $contacts = $contacts->groupBy('za_wb_contacts.sno','za_wb_contacts.phone', 'za_wb_messages.message','za_wb_messages.media_caption','za_wb_messages.type', 'za_wb_messages.message_date_time','za_lead.lead_name','za_lead.status')
+            ->orderByDesc('za_wb_messages.sno') // Order by sno to ensure the latest message
+            ->get();
+    
+        return response()->json($contacts);
+    }
+    // Send Message
+    public function sendMessage(Request $request)
+    {
+        $request->validate([
+            'phone' => 'required',
+            'message' => 'required',
+            'type' => 'required'
+        ]);
+         $user_id = $request->user()->user_id;
+
+        // Send the message via WhatsApp Business API
+        $isSent = $this->sendWhatsAppMessage($request->phone, $request->message);
+      
+       
+        // If the message was successfully sent, save it to the database
+        if ($isSent->getStatusCode() == 200) {
+            
+            $responseData = json_decode($isSent->getBody()->getContents(), true);
+            $messageId = $responseData['messages'][0]['id'] ?? null;
+            
+            $contact = WhatsappContactModel::firstOrCreate(['phone' => $request->phone]);
+
+            $message = WhatsappMessageModel::create([
+                'contact_id' => $contact->sno,
+                'message' => $request->message,
+                'message_date_time' => Carbon::now()->format('Y-m-d H:i:s'),
+                'type' => $request->type,
+                'from' => 1  ,
+                'wama_id' => $messageId ,
+                'created_by' => $user_id ,
+                'updated_by' => $user_id ,
+                'message_status' => 'sent',
+               
+            ]);
+
+            event(new NewMessage($message));
+            
+
+            return response()->json(['success' => true, 'data'=> $responseData, 'message' => $message]);
+        } else {
+            return response()->json(['success' => false,'data'=> $responseData, 'message' => 'Failed to send message'], 500);
+        }
+    }
+
+    
+    
+     public function loadMessages($phone)
+    {
+        $contact = WhatsappContactModel::where('phone', $phone)->first();
+
+        if (!$contact) {
+            return response()->json([]);
+        }
+
+        $messages = DB::table('za_wb_messages')
+            ->select('za_wb_messages.*', 'za_wb_contacts.phone')
+            ->join('za_wb_contacts', 'za_wb_contacts.sno', '=', 'za_wb_messages.contact_id')
+            ->where('za_wb_messages.contact_id', $contact->sno)
+            ->where('za_wb_messages.status', 0)
+            ->get();
+        
+
+        return response()->json($messages);
+    }
+
+    
+    public function sendWhatsAppMessage($phone, $messageText)
+    {
+        // // Replace with your actual Meta WhatsApp Business API details
+        $phoneNumberId = '437594702776125';
+        $accessToken = 'EAAFb1ehfWDIBO3IxRjM766z6Hyx00dC8MzmepCI5QZC30BjNU4z72nwDmegzVtxZBQKv1o0iyD7HduA4PUtPiA1iZBJvFAcntx2wSiJFU69VKWZBevCW3B0Dbai0RZB4gKFM6ZBycwnD5VUCKL3jTea95GTLBGgGTYm07ihWVngg750IBWeZB7nubdG6Lov4bbdnwZDZD'; // Update with a valid token
+        
+        // text checking
+        // $phoneNumberId = '557364954131846';
+        // $accessToken = 'EAASwZChdZBMwUBOZBi49HuYwwn5Nol5W50dTdvOHv5Qys7sq6Jn0ZAU3jHVFdoTmycmF0f2XlQU1co2zBbWLMpgZBiGGJJsL0oEckfKdWW1lDyLKtwXvHKRjRgli2ZAZCFbkcIPaJLVxzKY8bycqrTBm0HBY5c3yp2Qj3gQ6cuZCfFxhgq4OmShon1sTNhKhjKXkonoOgiRNT8YtZBtHbO8y5jAzqNEkbR60i2mR2NE0sooMZD'; // Update with a valid token
+    
+        $client = new Client();
+        try {
+            $response = $client->post("https://graph.facebook.com/v17.0/$phoneNumberId/messages", [
+                'json' => [
+                    'messaging_product' => 'whatsapp',
+                    'to' => '+'.$phone,
+                    'text' => [
+                        'body' => $messageText
+                    ]
+                ],
+                'headers' => [
+                    'Authorization' => "Bearer $accessToken",
+                    'Content-Type' => 'application/json',
+                ]
+            ]);
+    
+            // Check if the response indicates success
+            return $response;
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            // Log the error response
+            Log::error('WhatsApp API Error: ' . $e->getMessage());
+            return false; // Indicate failure to send message
+        }
+    }
+
+    public function CountChange($id)
+  {
+    $upd_WbContact =  WhatsappContactModel::where('sno', $id)->first();
+    $upd_WbContact->msg_count  = 0;
+    $upd_WbContact->Update();
+
+
+    return response([
+      'status'    => 200,
+      'message'   => 'Successfully updated!',
+      'error_msg' => null,
+      'data'      => null,
+    ], 200);
+  }
+  
+   public function LeadContactInfo($phone,Request $request)
+  {
+        $branch_id = $request->user()->branch_id;
+        
+        $contact = WhatsappContactModel::select('za_lead.*','za_wb_contacts.phone')->where('za_wb_contacts.phone', $phone)
+            ->leftJoin('za_lead', DB::raw("RIGHT(za_wb_contacts.phone, 10)"), '=', 'za_lead.lead_mobile') 
+            ->whereNotIn('za_lead.status',[10,4])
+            ->where('za_lead.branch_id',$branch_id)
+            ->first();
+
+      if (!$contact) {
+          return response()->json([]);
+      }
+
+      return response()->json($contact);
+  }
+   
+  public function DeleteForMe($id)
+  {
+    $upd_WbContact =  WhatsappMessageModel::where('sno', $id)->first();
+    $upd_WbContact->status  = 2;
+    $result=$upd_WbContact->save();
+    if($result){
+        event(new NewMessage($result));
+        return response()->json(['success' => true, 'data'=> '', 'message' => $result]);
+    } else {
+        return response()->json(['success' => false,'data'=> '', 'message' => 'Failed to Delete message'], 500);
+    }
+  }
+
+  public function reopenSessions()
+    {
+        $whatsappManager = new WhatsAppSessionManager();
+
+        // Get users whose session expired (older than 23 hours)
+        WhatsappContactModel::whereHas('messages', function ($query) {
+            $query->where('contact_id',11)->where('message_date_time', '<', now()->subHours(23));
+        })->chunk(50, function ($expiredUsers) use ($whatsappManager) {
+            foreach ($expiredUsers as $user) {
+                $whatsappManager->reopenSession($user->phone);
+            }
+        });
+
+        return response()->json(['message' => 'Session reopening process started.']);
+    }
+
+    
+}
