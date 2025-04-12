@@ -1,0 +1,2448 @@
+@extends('layouts/layoutMaster')
+
+<title>Elysium Academy&#174; | Whatsapp Chat</title>
+
+@section('vendor-style')
+@vite([
+'resources/assets/vendor/libs/datatables-bs5/datatables.bootstrap5.scss',
+'resources/assets/vendor/libs/datatables-buttons-bs5/buttons.bootstrap5.scss',
+'resources/assets/vendor/libs/select2/select2.scss',
+'resources/assets/vendor/libs/bootstrap-datepicker/bootstrap-datepicker.scss',
+'resources/assets/vendor/libs/dropzone/dropzone.scss',
+'resources/assets/vendor/libs/flatpickr/flatpickr.scss',
+'resources/assets/vendor/libs/tagify/tagify.scss',
+'resources/assets/vendor/libs/sweetalert2/sweetalert2.scss'
+])
+@endsection
+
+@section('vendor-script')
+@vite([
+'resources/assets/vendor/libs/select2/select2.js',
+'resources/assets/vendor/libs/bootstrap-datepicker/bootstrap-datepicker.js',
+'resources/assets/vendor/libs/dropzone/dropzone.js',
+'resources/assets/vendor/libs/flatpickr/flatpickr.js',
+'resources/assets/vendor/libs/tagify/tagify.js',
+'resources/assets/vendor/libs/sweetalert2/sweetalert2.js'
+
+])
+@endsection
+
+@section('page-script')
+@vite(['resources/assets/js/forms_date_time_pickers.js'])
+@vite(['resources/assets/js/forms-file-upload.js'])
+@endsection
+@section('content')
+
+
+<script src="https://cdn.jsdelivr.net/npm/emoji-mart/dist/browser.js"></script>
+
+<!-- Lead List Table -->
+<div class="card">
+    @php
+        $helper = new \App\Helpers\Helpers();
+        $common_date_format = $helper->general_setting_data()->date_format ?? 'd-M-y';
+    @endphp
+    <div class="chat_app">
+        <div class="chat_page">
+                
+            <div id="contacts" class="">
+                <div class="p-2">
+                    <div class="search-container mb-2">
+                        <input type="text" id="searchInput" class="mt-2" placeholder="Enter number..." onkeyup="searchContacts(event)" />
+                        <i class="mdi mdi-magnify fs-3 text-black search-icon"></i>
+                    </div>
+                </div>
+                <div id="contactList"></div>
+            </div>
+
+            <div id="chat">
+                <div id="chat_window">
+                    <div class="chat_bg"></div>
+                    <div id="chatHeader" class="header"></div>
+                    <div id="chatMessages" >
+                    </div>
+                    <div id="send_message" class="p-4 d-flex gap-1 align-items-center">
+                        <div class="attachment px-2">
+                            <span class="mdi mdi-attachment text-secondary" id="attachmentBtn"></span>
+                            <div id="attachmentContainer" style="position: absolute; display: none;"></div>
+                        </div>
+                        <div class="messsage_div rounded px-2 gap-2">
+                            <div class="emoji">
+                                <span class="mdi mdi-emoticon text-secondary" id="emojiButton"></span>
+                                <div id="emojiPicker" style="position: absolute; display: none;"></div>
+                            </div>
+                            <input type="text" class="form-control " id="messageInput" onkeyup="undisbale_func(this.value)" placeholder="Type a message..." />
+                        </div>
+                        <div class="text-center cursor-pointer ps-2" data-bs-toggle="tooltip" data-bs-target="#kt_modal_syllabus_document_send" onclick="sendSyllabusMessage()" data-bs-placement="bottom" title="Syllabus Send"><span class="mdi mdi-book-open-variant" id="syllabusBtn"></span></div>
+                        <div id="audioMsgBtn" class="cursor-pointer"> <span class="mdi mdi-microphone fs-7 ps-2" ></span></div>
+                        <div class="px-2" style="display:none;" id="sendBtnContain">
+                            <button class="send_button fw-bold rounded-circle d-flex justify-content-center align-items-center  p-2 fs-7" id="sendButton"  disabled onclick="sendMessage()"><span class="mdi mdi-send "></span></button>
+                        </div>
+                        <input type="hidden" id="to_phone">
+                    </div>
+                    <div id="dropArea" class="drop-area d-none">
+                        <p>Drag & Drop your files here</p>
+                    </div>
+                    <!-- File Upload Modal -->
+                    <div id="fileUploadDiv" class="d-none">
+                        <div class="upload-container">
+                            <h5>Upload Files</h5>
+                            <button type="button" id="closeUpload" class="btn-close" aria-label="Close"></button>
+                        </div>
+
+                        <!-- Current File Preview -->
+                        <div class="preview-container">
+                            <img id="filePreview" src="" alt="Preview" class="d-none"/>
+                            <p id="fileName"></p>
+                        </div>
+
+                        <!-- Add Caption -->
+                        <div id="document_caption" class="d-flex gap-2">
+                            <input type="text" id="send_media_caption" class="form-control" placeholder="Add a Caption">
+                            <span class="badge bg-success d-flex justify-content-center align-items-center rounded-circle cursor-pointer" id="uploadFile" onclick="">
+                                <span class="mdi mdi-send"></span>
+                            </span>
+                        </div>
+
+                        <!-- All File Previews -->
+                        <div id="allFilePreviewContainer" class="d-flex gap-2 mt-3"></div>
+
+                        <div class="modal-footer">
+                            <span class="p-3 border-1 fs-5 fw-bold add_more_document cursor-pointer" onclick="document.getElementById('fileInput').click()">+</span>
+                        </div>
+                    </div>
+                    <input type="file" id="fileInput" name="file_upload[]" class="d-none" multiple/>
+                </div>
+            </div>
+            
+           
+
+        </div> 
+    </div>
+    
+</div>
+
+
+
+<div id="contact_details" >
+    <div id="contact_header" class=" text-black d-flex gap-3 align-items-center justify-content-start p-6 ">
+    
+        <span class="mdi mdi-close py-2 fs-4 fw-bold text-dark" onclick="closeContactInfo()"></span>
+        <span class="py-2 fs-5">Contact info</span>
+    </div>
+    <div id="chatDetailsInfo"></div>
+
+</div>
+
+
+
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered p-0">
+        <div class="modal-content p-0">
+          <div class="modal-body p-0">
+          <div id="img_show">
+               <img id="fullImage" src=""  class="" width="100%" style="max-height: 80vh;" />
+          </div>
+            <div class="d-none" id="video_show">
+                <video controls class="" style="width: 100%; max-height:80vh ; " >
+                    <source id="showVideo" src="" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+   
+   <!-- feature Modal -->
+    <div class="modal fade" id="kt_modal_delete_message" tabindex="-1" aria-hidden="true" data-bs-keyboard="false" data-bs-backdrop="static">
+        <!--begin::Modal dialog-->
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <!--begin::Modal content-->
+            <div class="modal-content rounded px-8 py-6">
+                <div class="modal-body p-0 mb-6">
+                    <div class="text-start"> 
+                        <span id="feature_content">Delete Message?</span>
+                    </div>
+                    
+                    <input type="hidden" id="hidden_message_id" value="">
+                </div>
+                <!-- Ensure buttons are properly aligned at the bottom -->
+                <div class="d-flex justify-content-end align-items-center gap-2 mt-5">
+                    <button type="reset" class="btn btn-sm btn-white text-success border-1 border-success" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-success" data-bs-dismiss="modal" onclick="deleteForMeMessge()">Delete For Me</button>       
+                </div>
+            </div>
+            <!--end::Modal content-->
+        </div>
+        <!--end::Modal dialog-->
+    </div>
+
+     <!--begin::Modal - Lead syllabus document send-->
+     <div class="modal fade" id="kt_modal_syllabus_document_send" tabindex="-1" aria-hidden="true" data-bs-keyboard="false" data-bs-backdrop="static">
+        <!--begin::Modal dialog-->
+        <div class="modal-dialog modal-md">
+            <!--begin::Modal content-->
+            <div class="modal-content rounded">
+                <!--begin::Modal header-->
+                <div class="modal-header justify-content-end border-0 pb-0">
+                    <!--begin::Close-->
+                    <div class="btn btn-sm btn-icon btn-active-color-primary" data-bs-dismiss="modal">
+                        <!--begin::Svg Icon | path: icons/duotune/arrows/arr061.svg-->
+                        <span class="svg-icon svg-icon-1">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect opacity="0.5" x="6" y="17.3137" width="16" height="2" rx="1" transform="rotate(-45 6 17.3137)" fill="currentColor" />
+                                <rect x="7.41422" y="6" width="16" height="2" rx="1" transform="rotate(45 7.41422 6)" fill="currentColor" />
+                            </svg>
+                        </span>
+                        <!--end::Svg Icon-->
+                    </div>
+                    <!--end::Close-->
+                </div>
+                <!--end::Modal header-->
+                <!--begin::Modal body-->
+                <div class="modal-body pt-0 pb-10 px-10 px-xl-20">
+                    <!--begin::Heading-->
+                    <div class="mb-4 text-center">
+                        <h3 class="text-center mb-4 text-black">Send Syllabus Document</h3>
+                    </div>
+                    <div class="row">
+                        <input type="hidden" id="lead_id_document" name="lead_id">
+                        <div class="col-lg-6 mb-3">
+                            <label class="text-dark mb-1 fs-6 fw-semibold">Lead Name</label>
+                            <div>
+                                <label class="text-dark mb-1 fs-5 fw-semibold" id="lead_name_document">-</label>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 mb-3">
+                            <label class="text-dark mb-1 fs-6 fw-semibold">Lead Mobile</label>
+                            <div>
+                                <label class="text-dark mb-1 fs-5 fw-semibold" id="lead_phone_document">-</label>
+                            </div>
+                        </div>
+                        <!-- Basic -->
+                        <div class="col-lg-12 mb-3">
+                            <label class="text-dark mb-1 fs-6 fw-semibold">Course Type<span class="text-danger">*</span></label>
+                            <select id="course_type_id_msg" name="course_type_id_msg" class="select3 form-select" onchange="course_type_change_func(this.value)">
+                                <option value="">Select Course Type</option>
+                            </select>
+                            <div class="text-danger" id="course_type_id_msg_err"></div>
+                        </div>
+                        <div class="col-lg-12 mb-3">
+                            <label class="text-dark mb-1 fs-6 fw-semibold">Course<span class="text-danger">*</span></label>
+                            <select id="course_id_msg" name="course_id_msg" class="select3 form-select">
+                                <option value="">Select Course</option>
+                            </select>
+                            <div class="text-danger" id="course_id_msg_err"></div>
+                        </div>
+                        
+                    </div>
+                    <div class="d-flex justify-content-center align-items-center mt-4">
+                        <button type="reset" class="btn btn-secondary me-3" data-bs-dismiss="modal">Cancel</button>
+                        <button type="type" id="sendSyllabusDocumentBtn" onclick="sendSyllabus_func()" class="btn btn-primary">Send Syllabus</button>
+                    </div>
+
+                </div>
+                <!--end::Modal body-->
+            </div>
+            <!--end::Modal content-->
+        </div>
+        <!--end::Modal dialog-->
+    </div>
+    <!--end::Modal - Lead syllabus document send-->
+
+    <div id="common_modal" class="">
+      
+            <div class="common_modal_close cursor-pointer"  onclick="closeCommonModal()">
+                <span class="mdi mdi-close py-2 fs-4 fw-bold text-dark" ></span>
+            </div>
+        
+    </div>
+
+    
+
+
+<script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            padding: 0;
+            margin: 0;
+            font-family: inherit;
+            font-weight: 400;
+        }
+
+        .chat_app {
+            width: 100%;
+            height: 80vh;
+            background:rgb(255, 255, 255);
+            position: relative;
+        }
+
+        .chat_page {
+            width: 100%;
+            height: 100%;
+            max-width: 1450px;
+            margin: 0 auto;
+            box-shadow: 0 1px 1px 0 rgba(0, 0, 0, .06), 0 2px 5px 0 rgba(0, 0, 0, .2);
+            position: relative;
+            z-index: 100;
+            display: flex;
+            overflow: hidden;
+        }
+        .bck_icon_max{
+            display: none !important;
+        }
+
+        @media screen and (max-width: 620px) {
+           
+            .chat_page {
+                display: block;
+            } 
+            #contacts {
+                display: block !important;
+            }
+            #chat{
+                display: none !important;
+            }
+            .bck_icon_max{
+                display: block !important;
+            }
+        }
+
+        @media screen and (min-width: 1450px) {
+            .chat_page {
+                height: calc(80vh);
+            }
+        }
+
+        #contacts {
+            min-width: 300px;
+            flex: 40%;
+            border-right: 1px solid #DADADA;
+            display: flex;
+            flex-direction: column;
+        }
+
+      
+
+        #contactList {
+            flex: 1;
+            overflow-y: scroll;
+            background: #F5F5F5;
+            border-top: 1px solid #DADADA;
+        }
+        #contactList::-webkit-scrollbar {
+            width: 2px; 
+        }
+
+        #chat {
+            display: flex;
+            position: relative;
+        }
+
+        #chat_window {
+            min-width: 300px;
+            height:100%;
+            flex: 40%;
+            border-right: 1px solid #DADADA;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 1;
+        }
+
+        .chat_bg {
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            bottom: 0;
+            opacity:1;
+            z-index: 1;
+            background: url('/assets/eapl_images/bg_image/whatsapp_bg.jpg');
+        }
+
+        .header {
+            background: rgb(237, 237, 237);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            padding: 20px;
+            min-height: 60px;
+        }
+
+        .header .contact-avatar {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        #chatHeader, #send_message, .message-date, .chat__msg-group, .chat__encryption-msg {
+            z-index: 10;
+        }
+
+        #chatHeader {
+            /* Needed for the options btn to stay on top */
+            z-index: 20;
+        }
+        .header .chat-info {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        #chatMessages {
+            flex: 1;
+            position: relative;
+            background: #E4DCD4;
+            overflow-y: scroll;
+            overflow-x: hidden;
+            padding: 20px 5% 2pc;
+        }
+
+        .message-date {
+            text-align: center;
+            margin: 10px 0 14px;
+            position: relative;
+        }
+
+        .chat_date {
+            background: #E1F2FA;
+            display: inline-block;
+            color: #000000;
+            font-size: 0.75rem;
+            padding: 7px 10px;
+            border-radius: 5px;
+        }
+        /* .chatDiv {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 12px;
+            position: relative;
+        } */
+
+        #send_message {
+            background: rgb(240, 240, 240);
+            position: relative;
+        }
+
+        /* span{
+            width:auto;
+            height:auto;
+            padding:0;
+        } */
+        
+        .chat__msg-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .chat__msg {
+            padding: 6px 7px 8px 9px;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: #000000;
+            width: fit-content;
+            max-width: 95%;
+            line-height: 20px;
+            border-radius: 5px;
+            position: relative;
+            /* white-space: pre-line; */
+            display: flex;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            
+        }
+
+        .chat__msg.chat__img-wrapper {
+            padding: 4px;
+            width: fit-content;
+
+        }
+
+        .chat__msg--sent {
+            background: rgb(171, 252, 186);
+            align-self: flex-end;
+        }
+
+        .chat__msg--rxd {
+            background: white;
+            align-self: flex-start;
+        }
+
+        .chat__msg-group>*:nth-child(1):not(.chat__msg--sent)::before, .chat__msg--sent+.chat__msg--rxd::before {
+            content: "";
+            position: absolute;
+            width: 0;
+            height: 0;
+            top: 0;
+            left: -8px;
+            border-top: 6px solid white;
+            border-right: 6px solid white;
+            border-bottom: 6px solid transparent;
+            border-left: 6px solid transparent;
+        }
+
+        .chat__msg-group>*:nth-child(1):not(.chat__msg--rxd)::before, .chat__msg--rxd+.chat__msg--sent::before {
+            right: -8px;
+            content: "";
+            position: absolute;
+            width: 0;
+            height: 0;
+            top: 0;
+            border-top: 6px solid rgb(171, 252, 186);
+            border-right: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+            border-left: 6px solid rgb(171, 252, 186);
+        }
+
+        .chat__img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            word-wrap: break-word;
+        }
+
+        .chat__msg--rxd.textSpace .chat__msg-filler {
+            width: 65px;
+            display: inline-block;
+            height: 3px;
+            background: black;
+        }
+
+        .chat__msg--sent.textSpace .chat__msg-filler {
+            width: 80px;
+            display: inline-block;
+            height: 3px;
+            background: black;
+        }
+
+        .chat__msg-footer {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            right: 7px;
+            bottom: 3px;
+            color: rgba(0, 0, 0, 0.45);
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .chat__msg-status-icon {
+            color: #B3B3B3;
+            margin-left: 3px;
+        }
+
+        .chat__msg-status-icon--blue {
+            color: #0DA9E5;
+        }
+
+        .chat__img-wrapper .chat__msg-footer, .chat__img-wrapper .chat__msg-options-icon, .chat__img-wrapper .chat__msg-status-icon {
+            color: white;
+        }
+
+        .chat__msg-options {
+            opacity: 0;
+            position: absolute;
+            right: 5px;
+            top: 3px;
+            pointer-events: none;
+            transition: all 0.2s;
+            display:flex;
+            align-items:center;
+        }
+
+        .chat__msg--rxd .chat__msg-options {
+            background: transparent;
+        }
+
+        .chat__msg--sent .chat__msg-options {
+            background: transparent;
+        }
+
+        .chat__img-wrapper .chat__msg-options {
+            background: transparent;
+        }
+
+        .chat__msg:hover .chat__msg-options {
+            opacity: 1;
+            pointer-events: unset;
+        }
+
+        .chat__msg-options-icon {
+            color: rgb(145, 145, 145);
+            width: 20px;
+            height: 20px;
+        }
+
+        @media screen and (min-width: 1000px) and (max-width: 1300px) {
+            #contacts {
+                flex: 35%;
+            }
+            #chat {
+                flex: 65%;
+            }
+        }
+
+        @media screen and (min-width: 1301px) {
+            #contacts {
+                flex: 30%;
+            }
+            #chat {
+                flex: 70%;
+            }
+        }
+
+       
+        /* @media screen and (min-width: 1301px) {
+            .chat__msg {
+                max-width: 65%;
+            }
+        }
+
+        @media screen and (min-width: 1000px) and (max-width: 1300px) {
+            .chat__msg {
+                max-width: 75%;
+            }
+        }
+
+        @media screen and (min-width: 900px) and (max-width: 1000px) {
+            .chat__msg {
+                max-width: 85%;
+            }
+        }
+
+        @media screen and (max-width: 1000px) {
+            .chat-sidebar {
+                transition: transform 0.1s ease;
+                transform: translateX(120vw);
+                position: absolute;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 10;
+            }
+            .chat-sidebar--active {
+                transform: translateX(0);
+                transition: transform 0.1s ease;
+            }
+        }
+
+         */
+
+        #common_modal{
+            display:none;
+            position: absolute;
+            z-index: 1060000 !important;
+            width: 100%;
+            height:100%;
+            top:0;
+            right:0;
+            background-color:rgba(188, 231, 207, 0.9);;
+        }
+        
+        .common_modal_close{
+            width:28px;
+            position:absolute;
+            right:10px;
+            top:10px;
+            z-index: 1060001 !important;
+        }
+        #common_modal .videoDiv{
+            position:relative;
+            width: 100%;
+            height:100%;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            padding:100px 0;
+
+        } 
+        
+        #common_modal .videoDiv video {
+            max-width: 100%;
+            max-height: 100%; 
+            object-fit: contain; 
+        }
+
+        .modal {
+            z-index: 1050000 !important; /* Set the z-index of the modal above the button's z-index */
+        }
+
+        .modal-backdrop {
+            z-index: 1049999 !important; /* Ensure the backdrop is under the modal content */
+        }
+
+        .modal-dialog {
+            z-index: 1050000 !important; /* Ensure the modal dialog itself has a high z-index */
+    }
+       .search-container {
+            display: flex;
+            align-items: center;
+            position: relative;
+            border: 1px solid #ccc;
+            margin-top:10px;
+            border-radius: 25px;
+            padding:0px 8px;
+            background-color: white;
+        }
+        
+        /* Styling for the search input */
+        .search-container input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 16px;
+            border-radius: 25px;
+            padding:4px 8px;
+            margin-bottom:4px;
+        }
+        
+        /* Positioning the search icon inside the input */
+        .search-icon {
+            position: absolute;
+            right: 10px; /* Adjust the position */
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #555;
+            cursor: pointer;
+        }
+
+
+        #sideHeader img {
+            width: 80px !important;  /* Increase width */
+            height: auto !important; /* Maintain aspect ratio */
+        }
+        #sideHeader {
+            background-color: white; /* Change background to a nice blue */
+            border-radius: 10px; /* Rounded corners */
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 10px 15px; /* Add more padding */
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2); /* Add a soft shadow */
+        }
+       
+      
+        
+        .mdi-whatsapp {
+            color: #25D366; /* WhatsApp green color */
+            font-size: 2rem;
+        }
+
+
+        /* .chat_page {
+            display: flex;
+            font-family: Arial, sans-serif;
+            height: 80vh; 
+            margin: 0;
+            gap: 0;
+        } */
+
+       
+
+        
+         /* #contacts {
+            width: 35%;
+            height:100%;
+            overflow-y:auto;
+            border-right: 1px solid #ddd;
+        } */
+        /* #chat {
+            width: 70%;
+            display: none; 
+            padding:0;
+        } */
+
+        #contact_details{
+            display: none;
+            width: 30%;
+            height:100%;
+            border-right: 1px solid #ddd;
+            border : 1px solid #ddd;
+        }
+
+        #contact_header{
+            background-color:#f1f2f6;
+             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+          
+        }
+        #chatHeader{
+            background-color:#f1f2f6;
+        }
+
+        #chatDetailsInfo{
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* #chat_window{
+            display:flex;
+            flex-direction:column;
+          
+        } */
+
+        
+        /*.contact {*/
+        /*    cursor: pointer;*/
+        /*    padding: 10px;*/
+        /*    border: 1px solid #ddd;*/
+        /*    margin-bottom: 5px;*/
+        /*    background:white;*/
+        /*    border-radius: 40px;*/
+        /*}*/
+        /*.contact:hover {*/
+        /*    background-color: #f1f1f1;*/
+        /*}*/
+        
+        
+     
+        .contact {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: white;
+            border-bottom:none;
+            transition: background-color 0.2s;
+        }
+        
+         .contact:last-child {
+            border-bottom: 1px solid #ddd;
+        }
+          .contact:first-child {
+            border-top: none;
+        }
+        
+        
+       
+         .contact:hover {
+            background-color:rgb(226, 253, 231);
+        }
+        
+         .contact.active {
+            background-color: rgb(203, 250, 212); /* Light highlight color */
+        }
+        
+    
+        .contact-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #dfe4e7; /* Default background color */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+        
+        .contact-avatar .avatar-letter {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            font-weight: bold;
+            color: white;
+            font-size: 18px; /* Adjust if necessary */
+            border-radius: 50%; /* Ensures it's circular */
+        }
+        
+      
+        .contact-number {
+            font-size: 16px;
+            color: #333;
+        }
+
+        .message {
+            position: relative;
+            font-size:20px;
+            margin: 5px 0;
+            max-width: 60%;
+            padding: 10px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+           
+        }
+          .sent { 
+            align-self: flex-end;
+            background:  rgb(171, 252, 186);
+            border-bottom-right-radius: 2px;
+         }
+        
+
+        
+        .received {
+            text-align: left;
+            align-self: flex-start;
+            background: rgb(255, 255, 255);
+            border-bottom-left-radius: 2px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.4);
+
+         }
+         
+         
+            .message{
+                color:black;
+            }
+        
+       
+        #searchButton {
+            margin-top: 10px;
+        }
+        
+        /* #chatMessages{
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            position:relative;
+        } */
+
+       
+
+        .chat-header-content {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #007bff;
+            border: 1px solid #007bff;
+        }
+        .msg_status{
+            color: #007bff;
+        }
+        .contact-info{
+            flex-grow:1;
+        }
+        .unread-count{
+            background-color:#26d367;
+            color:white;
+        }
+
+        .msg_footer{
+            height: 15px;
+            line-height: 15px;
+            white-space: nowrap;
+        }
+    
+
+        .received-emoji .emoji-btn {
+            cursor: pointer;
+            font-size: 14px;
+            border-radius:50%;
+            color: white;
+            background-color:#c1c0ba;
+            border: none;
+            position: absolute;
+            top:50%;
+            right:-18px;
+            padding: 3px 4px;
+            
+            transform: translate(50%,-50%);
+            
+            
+        }
+
+        .received-emoji  .emoji-picker {
+            display: flex;
+            gap: 5px;
+            background: #fff;
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+            position: absolute;
+            z-index: 10;
+            
+        }
+
+        .received-emoji  .emoji-option {
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .received-emoji  .d-none {
+            display: none;
+        }
+
+
+        .sent-emoji .emoji-btn {
+            cursor: pointer;
+            font-size: 14px;
+            text:center;
+            border-radius:50%;
+            color: white;
+            background-color:#c1c0ba;
+            border: none;
+            position: absolute;
+            top:50%;
+            left:-18px;
+            padding: 3px 4px;
+            transform: translate(-50%,-50%);
+            
+            
+        }
+
+        .sent-emoji  .emoji-picker {
+            display: flex;
+            gap: 5px;
+            background: #fff;
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+            position: absolute;
+            z-index: 10;
+            
+        }
+
+        .sent-emoji  .emoji-option {
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .sent-emoji  .d-none {
+            display: none;
+        }
+
+        .attachment{
+            cursor:pointer;
+
+        }
+        #emojiButton{
+            cursor:pointer;
+           
+        }
+       
+        .messsage_div{
+            flex-grow:1;
+            border:none;
+            background:white;
+            display:flex;
+            align-items:center;
+            position:relative;
+        }
+
+        #emojiPicker {
+            width: 280px;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            z-index: 1000;
+            bottom:50px;
+            overflow-x: hidden;
+            overflow-y: scroll;
+        }
+
+        #emojiPicker::-webkit-scrollbar {
+            width: 20px;
+            height:auto;
+        }
+
+       
+        .messsage_div input{
+            border:none;
+        }
+        
+        /* #send_message{
+            background-color:#f1f2f6;
+        } */
+        .send_button:disabled{
+            border:none;
+            background-color:#f1f2f6;
+            color:#63717e;
+        }
+        .send_button{
+            border:none;
+            background-color:#2bac32;
+            color:white;
+        }
+
+        .rotate {
+            transform: rotate(180deg);
+            transition: transform 0.4s ease-in-out;
+        }
+        
+        .link_msg{
+            color:#077bf4;
+            text-decoration:underline;
+        }
+        .link_msg:hover{
+            color:#077bf4;
+            text-decoration:none;
+        }
+         #attachmentBtn{
+            position: relative;
+        }
+
+        #attachmentContainer{
+            width: auto;
+            max-height: auto;
+            border-radius: 10px;
+            box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.4);
+            background-color: white;
+            z-index: 1000;
+            bottom:50px;
+            background:white;  
+        }
+        #attachmentContainer .attachment-list{
+             display:flex;
+            justify-content:center;
+            padding:20px;
+
+        }
+
+        .drop-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px dashed white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 10;
+            border-radius: 10px;
+        }
+
+        #fileUploadDiv {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(188, 231, 207, 0.9);
+            border: 2px solid white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: black;
+            z-index: 20;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .upload-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 10px;
+        }
+
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #filePreview {
+            max-width: 100px;
+            max-height: 100px;
+            margin-top: 10px;
+            border-radius: 10px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content:end;
+        }
+
+        .small-preview {
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .small-preview:hover {
+            border-color: blue;
+        }
+
+        .info-content-img .avatar-letter ,.info-content-img .unknwn_acn{
+            width: 60px;
+            height: 60px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color:black;
+
+        }
+
+        .feature_dropdown{
+            display:none;
+            position: absolute;
+            top:0;
+            right:4px;
+            background-color:none;
+            text-shadow:0px 5px 5px rgba(0,0,0,0.4);
+            cursor: pointer;
+            font-size:28px;
+
+        }
+
+        .message:hover  .feature_dropdown {
+            display: block;
+        }
+
+      
+
+        .received .featureContainer{
+            width: 140px;
+            max-height: auto;
+            border-radius: 2px;
+            box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.3);
+            background-color: white;
+            z-index: 100000;
+            top:-30px;
+            right:-100px;
+            background:white;  
+        }
+
+        .sent .featureContainer{
+            width: 140px;
+            max-height: auto;
+            border-radius: 2px;
+            box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.3);
+            background-color: white;
+            z-index: 100000;
+            top:-30px;
+            right:20px;
+            background:white;  
+        }
+
+        
+        .featureContainer .feature-list{
+            display:flex;
+            justify-content:end;
+            padding:20px;
+
+        }
+
+        .feature_list div{
+            cursor: pointer;
+        }
+
+        @media screen and (min-width: 1000px) and (max-width: 1300px) {
+            #contacts {
+                flex: 35%;
+            }
+            #contacts~div {
+                flex: 65%;
+            }
+        }
+
+        @media screen and (min-width: 1301px) {
+            #contacts {
+                flex: 30%;
+            }
+            #contacts~div {
+                flex: 70%;
+            }
+        }
+        
+    </style>
+
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let dropArea = document.getElementById("dropArea");
+            let fileInput = document.getElementById("fileInput");
+            let fileUploadDiv = document.getElementById("fileUploadDiv");
+            let filePreview = document.getElementById("filePreview");
+            let fileNameText = document.getElementById("fileName");
+            let allFilePreviewContainer = document.getElementById("allFilePreviewContainer");
+            let closeUpload = document.getElementById("closeUpload");
+
+            let selectedFiles = [];
+
+            // Prevent default drag behaviors
+            ["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
+                document.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // Show drop area when dragging files
+            document.addEventListener("dragenter", function (e) {
+                dropArea.classList.remove("d-none");
+            });
+
+            // Hide drop area when leaving
+            document.addEventListener("dragleave", function (e) {
+                if (!dropArea.contains(e.relatedTarget)) {
+                    dropArea.classList.add("d-none");
+                }
+            });
+
+            // Handle file drop
+            dropArea.addEventListener("drop", function (e) {
+                dropArea.classList.add("d-none");
+                let files = Array.from(e.dataTransfer.files);
+                handleFiles(files);
+            });
+
+            // Handle file selection
+            fileInput.addEventListener("change", function () {
+                let files = Array.from(fileInput.files);
+                handleFiles(files);
+            });
+
+            function handleFiles(files) {
+                files.forEach(file => {
+                    if (!selectedFiles.some(f => f.name === file.name)) {
+                        selectedFiles.push(file);
+                        displayFilePreview(file, selectedFiles.length === 1);
+                    }
+                });
+            }
+
+            function displayFilePreview(file, isMainPreview = false) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    if (isMainPreview) {
+                        filePreview.src = e.target.result;
+                        filePreview.classList.remove("d-none");
+                        fileNameText.textContent = file.name;
+                        fileUploadDiv.classList.remove("d-none");
+                    }
+
+                    let img = document.createElement("img");
+                    img.src = e.target.result;
+                    img.classList.add("small-preview");
+                    img.style.width = "50px";
+                    img.style.height = "50px";
+                    img.style.borderRadius = "10px";
+                    img.style.margin = "5px";
+                    img.onclick = () => updateMainPreview(file);
+                    allFilePreviewContainer.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            function updateMainPreview(file) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    filePreview.src = e.target.result;
+                    filePreview.classList.remove("d-none");
+                    fileNameText.textContent = file.name;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            closeUpload.addEventListener("click", function () {
+                fileUploadDiv.classList.add("d-none");
+                dropArea.classList.add("d-none");
+            });
+        });
+    </script>
+    
+    <!--check text link-->
+    <script>
+        function linkifyText(text) {
+            // Handle *bold* text
+            text = text.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+
+            // Handle full URLs with HTTP/HTTPS, including query parameters
+            text = text.replace(/https?:\/\/[^\s]+/g, function(match) {
+                return `<a class='link_msg' href='${match}' target='_blank'>${match}</a>`;
+            });
+
+            // Handle URLs starting with "www."
+            text = text.replace(/(^|\s)(www\.[^\s]+)/g, function(match, leading, url) {
+                return leading + `<a class='link_msg' href='http://${url}' target='_blank'>${url}</a>`;
+            });
+
+            // Handle email addresses
+            text = text.replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, '<a class="link_msg" href="mailto:$1">$1</a>');
+
+            // Handle phone numbers (basic pattern)
+            text = text.replace(/\b(\+?\d[\d\s\-]{8,}\d)\b/g, '<a class="link_msg" href="tel:$1">$1</a>');
+
+            return text;
+        }
+       
+
+        function linkifyAndPreserveLines(text) {
+            // 1) Linkify URLs, emails, phone numbers, etc.
+            let processedText = linkifyText(text);
+
+            // 2) Replace newlines with <br> for paragraph-like formatting
+            processedText = processedText.replace(/\r?\n/g, '<br>');
+
+            return processedText;
+        }
+
+
+        function linkifyDocText(text) {
+            // Handle bold text: *text* becomes <strong>text</strong>
+            text = text.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+
+            // Handle full URLs with HTTP/HTTPS, including query parameters
+            text = text.replace(/https?:\/\/[^\s]+/g, function(match) {
+                return `<a class='link_msg' href='${match}' target='_blank'>${match}</a>`;
+            });
+
+            // Handle URLs starting with "www."
+            text = text.replace(/(^|\s)(www\.[^\s]+)/g, function(match, leading, url) {
+                return leading + `<a class='link_msg' href='http://${url}' target='_blank'>${url}</a>`;
+            });
+
+            // Handle email addresses (basic email pattern)
+            text = text.replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, '<a class="link_msg" href="mailto:$1">$1</a>');
+
+            // Handle phone numbers (basic pattern for numbers with optional country code and dashes/spaces)
+            text = text.replace(/\b(\+?\d[\d\s\-]{8,}\d)\b/g, '<a class="link_msg" href="tel:$1">$1</a>');
+
+            return text;
+        }
+
+        function docLinkifyAndPreserveLines(text) {
+            // 1) Linkify URLs, emails, phone numbers, etc.
+            let processedText = linkifyDocText(text);
+
+            // 2) Replace newlines with <br> for paragraph-like formatting
+            processedText = processedText.replace(/\r?\n/g, '<br>');
+
+            return processedText;
+        }
+    </script>
+
+    <script>
+        let currentChatPhone = "";
+         let lastDisplayedDate = ""; // Store last displayed date globally
+    
+        // Function to highlight the selected contact
+        function highlightContact(selectedContact) {
+            // Remove active class from all contacts
+            document.querySelectorAll('.contact').forEach(contact => {
+                contact.classList.remove('active');
+            });
+        
+            // Add active class to the clicked contact
+            selectedContact.classList.add('active');
+        }
+        
+        // Function to open chat with a specific contact
+        function openChat(phone,name,contact_id) {
+            currentChatPhone = contact_id; // Store the phone number of the current chat
+
+            $('#lead_name_document').html(name);
+            $('#lead_phone_document').html(phone);
+            $('#lead_id_document').val(phone);
+        
+            let chatHeader = document.getElementById('chatHeader');
+        
+            // Clear previous content
+            chatHeader.innerHTML = '';
+        
+         
+        
+            // Create avatar (same as contact list)
+            let avatar = document.createElement('div');
+            avatar.className = 'contact-avatar';
+            avatar.innerHTML = name ? 
+              `<span class="me-3 bck_icon_min bck_icon_max"><i class="fa-solid fa-arrow-left-long fs-1 text-dark"></i></span>
+              <span class="avatar-letter" style="background-color: ${getLetterColor(name[0])}">${name[0].toUpperCase()}</span>` : 
+              '<span class="unknwn_acn mdi mdi-account fs-4"></span>';
+        
+            // Create phone info div
+            let infoDiv = document.createElement('div');
+            infoDiv.className = 'chat-info ms-2';
+            infoDiv.innerHTML = `
+            <strong>${name ? name : phone}</strong>
+            <br>
+            <div class="fs-7 ms-1">${name ? phone : ""}</div>
+            <input type="hidden" id="hidden_contact_no" value="${phone}"/>`;
+
+              // Create avatar (same as contact list)
+            let headerAction = document.createElement('div');
+            headerAction.className = 'contact-headerAction';
+            headerAction.innerHTML =  
+            `<span class="action_icon"><i class="mdi mdi-dots-vertical fs-4 d-none text-dark"></i></span>`;
+        
+            // Append avatar and info to chat header
+            chatHeader.appendChild(avatar);
+            chatHeader.appendChild(infoDiv);
+            chatHeader.appendChild(headerAction);
+        
+            document.getElementById('to_phone').value = phone;
+            // document.getElementById('chat').style.display = 'block';
+            document.getElementById('chatMessages').innerHTML = ''; // Clear previous messages
+            loadMessages(phone);
+        }
+        
+        function undisbale_func(val) {
+            if (val.trim()) {
+                $('#sendBtnContain').show();
+                $('#audioMsgBtn').hide();
+                $('#sendButton').prop('disabled', false);
+            } else {
+                $('#sendBtnContain').hide();
+                $('#audioMsgBtn').show();
+                $('#sendButton').prop('disabled', true);
+            }
+        }
+        
+        // Pusher setup
+        var pusher = new Pusher('f06e6913d483ce90b31e', {
+            cluster: 'ap2',
+            encrypted: true
+        });
+        
+        var channel = pusher.subscribe('chat');
+        channel.bind('message.received', function (data) {
+             loadContacts();
+            // Check if the received message is for the currently open chat
+            if (data.message.contact_id == currentChatPhone) {
+                appendMessage(data.message); // Append the message to the correct chat
+                loadContacts();
+            }
+        });
+        
+      
+        
+     
+
+        function appendMessage(message) {
+            const messageDate = new Date(message.message_date_time);
+        
+            // Format time to 12-hour format with AM/PM
+            const formattedTime = messageDate.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+            });
+        
+            const today = new Date();
+            const yesterday = new Date();
+            yesterday.setDate(today.getDate() - 1);
+        
+            const messageDateString = messageDate.toDateString();
+            const todayString = today.toDateString();
+            const yesterdayString = yesterday.toDateString();
+        
+            let displayDate = "";
+            if (messageDateString === todayString) {
+                displayDate = "Today";
+            } else if (messageDateString === yesterdayString) {
+                displayDate = "Yesterday";
+            } else {
+                displayDate = messageDate.toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric"
+                });
+            }
+        
+            let chatMessages = document.getElementById('chatMessages');
+
+            let chatDiv = document.createElement('div');
+            chatDiv.className = 'chatDiv';
+
+            // Check if the date is different from the last displayed date
+            if (lastDisplayedDate !== messageDateString) {
+                let dateDiv = document.createElement('div');
+                dateDiv.className = 'message-date';
+                let dateSpan = document.createElement('span');
+                dateSpan.className = 'chat_date';
+                dateSpan.innerText = displayDate;
+                dateDiv.innerHTML = dateSpan.outerHTML; 
+                chatDiv.appendChild(dateDiv);
+                lastDisplayedDate = messageDateString; 
+            }
+            
+            
+            
+            
+            let messageDiv = document.createElement('div');
+            messageDiv.className =message.type != 'reaction'?'chat__msg-group' :'';
+            message_id='mssg_' + message.sno;
+            messageDiv.id = message_id;
+
+            let typeClass = 'textSpace';
+            let messageContent = '';
+            if (message.type === 'text') {
+                typeClass = 'textSpace';
+                const formatTextMessage = linkifyAndPreserveLines(message.message);
+                messageContent = `<span class="text-start msg_txt fs-6 w-100">${formatTextMessage}</span>`;
+            } else if (message.type === 'image') {
+                typeClass = 'chat__img-wrapper';
+                messageContent = `
+              
+                <img src="${message.media_url}" onclick="showFullImage('${ message.media_url }')" class="chat-image rounded shadow-sm cursor-pointer mb-1" alt="Image"  style="max-width: 250px; max-height:300px ; border-radius: 10px;">
+                <span>
+                <div class="text-end fs-6 mb-4">${message.media_caption ? message.media_caption :""}</div>
+               
+                `;
+            } else if (message.type === 'video') {
+                typeClass = 'chat__img-wrapper';
+                messageContent = `
+                    <video controls class="chat-video rounded shadow-sm cursor-pointer" style="max-width: 250px; max-height:300px ; border-radius: 10px; " id="videoMsg" onclick="showVideo('${ message.media_url }')">
+                        <source src="${message.media_url}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video><div class="text-end fs-6 mb-4">${message.media_caption ? message.media_caption :""}</div>`;
+            } else if (message.type === 'audio') {
+                typeClass = 'audioSpace';
+                messageContent = `
+                    <audio controls class="chat-audio">
+                        <source src="${message.media_url}" type="audio/mpeg">
+                        Your browser does not support the audio tag.
+                    </audio><div class="text-end fs-6">${message.media_caption ? message.media_caption :""}</div>`;
+            } else if (message.type === 'document') {
+                typeClass = 'docSpace';
+                const formatDocTextMessage = message.message ? docLinkifyAndPreserveLines(message.message) : '';
+                const fileExtension = message.media_url ? message.media_url.split('.').pop().toUpperCase() : '';
+                let fileIcon = '';
+                if (fileExtension === 'PDF') {
+                    fileIcon = '<span class="mdi mdi-file-pdf-box fs-2 fw-bold" style="color:#f34747;"></span>';
+                } else if (fileExtension === 'DOCX') {
+                    fileIcon = '<span class="mdi mdi-file-document fs-2 fw-bold" style="color:#61aaf6;"></span>';
+                } else if (fileExtension === 'XLSX') {
+                    fileIcon = '<span class="mdi mdi-microsoft-excel fs-2 fw-bold" style="color:#57d28a;"></span>';
+                } else {
+                    fileIcon = '<span class="mdi mdi mdi-file text-muted fs-2 fw-bold"></span>';
+                }
+                messageContent = `
+                        <div class="border rounded bg-light shadow-sm  d-flex flex-column flex-md-row align-items-start">
+                            <div class="file-control d-flex align-items-center gap-2 w-100 px-4 py-2">
+                                <span>${fileIcon}</span>
+                                <span class="flex-grow-1 d-flex flex-column ">
+                                    <small class="fs-6 ">${message.media_caption || 'Document'}</small> 
+                                    <span class="text-muted fs-8  d-flex align-items-start"><small>${fileExtension ? fileExtension : 'File'}</small></span>
+                                </span>
+                              
+                                
+                                <a href="${message.media_url}" target="_blank" class="d-flex align-items-center justify-content-center text-muted">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34" width="34" height="34">
+                                        <path fill="currentColor" d="M17 2c8.3 0 15 6.7 15 15s-6.7 15-15 15S2 25.3 2 17 8.7 2 17 2m0-1C8.2 1 1 8.2 1 17s7.2 16 16 16 16-7.2 16-16S25.8 1 17 1z"></path>
+                                        <path fill="currentColor" d="M22.4 17.5h-3.2v-6.8c0-.4-.3-.7-.7-.7h-3.2c-.4 0-.7.3-.7.7v6.8h-3.2c-.6 0-.8.4-.4.8l5 5.3c.5.7 1 .5 1.5 0l5-5.3c.7-.5.5-.8-.1-.8z"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                        </div> 
+                        <div class=" mt-2 mb-4">
+                        ${message.message != message.media_caption ? `
+                            
+                            <span class="text-start msg_txt fs-6 ">${formatDocTextMessage}</span>
+                           `:''}
+                            </div>
+                    `;
+            } else if (message.type === 'sticker') {
+                typeClass = 'stickerSpace';
+                messageContent = `<img src="${message.media_url}" class="chat-sticker cursor-pointer" onclick="showFullImage('${ message.media_url }')" alt="Sticker" style="max-width: 150px;" >`;
+            } else {
+                typeClass = 'textSpace';
+                messageContent = `<a href="${message.media_url}" class="text-primary fw-bold" target="_blank">File</a>`;
+            }
+
+            if (message.from == 0 && message.type != 'reaction') {
+                messageDiv.innerHTML = `
+                        <span class="chat__msg chat__msg--rxd ${typeClass}">
+                            <div id="featureContainer_${message.sno}" class="featureContainer" style="position: absolute; display:none;"></div>
+                            <span class="w-100" >${messageContent}</span>
+                            <span class="chat__msg-filler"> </span>
+                            <span class="chat__msg-footer text-dark">${formattedTime}</span>
+                            <span aria-label="Message options" class="chat__msg-options">
+                            <span class="mdi mdi-chevron-down fs-5 chat__msg-options-icon" id="feature_dropdown_${message.sno}" onclick="openFeatureDrop('${message.sno}')"></span>
+                            </span>
+                        </span>
+                `;
+            } else if (message.from == 1) {
+                  const formatSentTextMessage=linkifyAndPreserveLines(message.message);
+                        messageDiv.innerHTML = `
+                            <span class="chat__msg chat__msg--sent ${typeClass}">
+                                <span class="w-100"> ${messageContent}</span>
+                                <span class="chat__msg-filler"> </span>
+                                <span class="chat__msg-footer">
+                                <span>${formattedTime}</span>
+                                ${message.message_status == 'sent' ? '<span class="text-dark fs-8 mdi mdi-check chat__msg-status-icon"></span>' : 
+                                        (message.message_status == 'delivered' ? '<span class="text-dark fs-8 mdi mdi-check-all chat__msg-status-icon"></span>' : 
+                                         (message.message_status == 'read' ? '<span class="fs-8 text-dark msg_status mdi mdi-check-all chat__msg-status-icon" style="color: #007bff;"></span>' : 
+                                        '<span class="fs-8 text-dark mdi mdi-clock-time-three-outline chat__msg-status-icon"></span>'))}
+                                </span>
+                                <span aria-label="Message options" class="chat__msg-options">
+                                <span class="mdi mdi-chevron-down chat__msg-options-icon" id="feature_dropdown_${message.sno}" onclick="openFeatureDrop('${message.sno}')"></span>
+                                </span>
+                                 <div id="featureContainer_${message.sno}" class="featureContainer" style="position: absolute; display:none;"></div>
+                            </span>
+                        `;
+                    }
+
+           
+        
+            chatDiv.appendChild(messageDiv);
+            chatMessages.appendChild(chatDiv);
+            
+          
+            window.openFeatureDrop = function (message_id) {
+            event.stopPropagation();
+            closeAllFeatureContainers();
+            const featureContainer = document.getElementById(`featureContainer_${message_id}`);
+            const featureBtn = document.getElementById(`feature_dropdown_${message_id}`);
+            const isFeatureOpen = featureContainer.style.display === "block";
+
+            toggleFeatureInp(message_id, !isFeatureOpen);
+        }
+
+        // Function to toggle the feature dropdown visibility
+        function toggleFeatureInp(message_id, show) {
+            const featureContainer = document.getElementById(`featureContainer_${message_id}`);
+            const featureBtn = document.getElementById(`feature_dropdown_${message_id}`);
+
+            if (show) {
+                featureContainer.style.display = "block";
+                featureBtn.classList.replace("mdi-chevron-down", "mdi-chevron-up");
+                featureContainer.innerHTML = `
+                    <div class="text-start text-dark fw-semibold feature_list d-flex flex-column gap-2 px-4 py-2">
+                        <div class="fs-7 delete_for_me">
+                            <span onclick="delete_msg_func('${message_id}')">Delete</span>
+                            
+                        </div>
+                    </div>
+                `;
+            } else {
+                featureContainer.style.display = "none";
+                featureBtn.classList.replace("mdi-chevron-up", "mdi-chevron-down");
+            }
+        }
+
+        function closeAllFeatureContainers() {
+            const openContainers = document.querySelectorAll('.featureContainer');
+            openContainers.forEach(container => {
+                container.style.display = "none";
+                const btn = container.previousElementSibling;
+                if (btn) {
+                    btn.classList.replace("mdi-chevron-up", "mdi-chevron-down");
+                }
+            });
+        }
+
+        // Hide picker when clicking outside
+        document.addEventListener("click", function (event) {
+            const featureContainers = document.querySelectorAll('.featureContainer');
+            featureContainers.forEach(featureContainer => {
+                if (!featureContainer.contains(event.target) && !event.target.classList.contains('feature_dropdown')) {
+                    toggleFeatureInp(featureContainer.id.replace('featureContainer_', ''), false);
+                }
+            });
+        });
+
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            
+        }
+
+        
+        // Send message function
+        document.getElementById('messageInput').addEventListener('keypress', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Prevents new line in input field
+                sendMessage();
+            }
+        });
+        
+        function sendMessage() {
+            let messageInput = document.getElementById('messageInput');
+            let sendButton = document.getElementById('sendButton');
+            let message = messageInput.value.trim();
+            let phone = document.getElementById('to_phone').value.trim();
+        
+            if (!message) return; // Prevent sending empty messages
+        
+            sendButton.disabled = true; // Disable send button to prevent double sending
+        
+            fetch('/send-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ phone: phone, message: message, type: 'text' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    sendButton.disabled = false; // Re-enable the send button
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                sendButton.disabled = false; // Re-enable send button if there was an error
+            });
+        
+            messageInput.value = ''; // Clear input field
+        }
+        
+        // Enable send button only if input has text
+        document.getElementById('messageInput').addEventListener('input', function () {
+            let sendButton = document.getElementById('sendButton');
+            sendButton.disabled = !this.value.trim();
+        });
+        
+        function loadMessages(phone) {
+            let contactDetailsDiv = document.querySelector('#contact_details');
+            contactDetailsDiv.style.display="none";
+            fetch(`/messages/${phone}`)
+            .then(response => response.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    data.forEach(message => {
+                        appendMessage(message);
+                        fetchContactInfo(phone)
+                        
+                    });
+                }
+            });
+        }
+
+
+        function searchContacts(event) {
+            let input = document.getElementById('searchInput').value.trim();
+            let contactList = document.getElementById('contactList');
+            contactList.innerHTML = ''; // Clear previous results
+        
+            if (input) {
+                // Create the contact div
+                let contactDiv = document.createElement('div');
+                contactDiv.className = 'contact';
+                contactDiv.onclick = function() { openChat(input,"",""); }; // Open chat on click
+        
+                // Generate a random letter (A-Z)
+                let randomLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+        
+                // Create the avatar (circle)
+                let avatar = document.createElement('div');
+                avatar.className = 'contact-avatar';
+                avatar.innerHTML = '<span class="unknwn_acn mdi mdi-account fs-4"></span>';
+        
+                // Create the number span
+                let numberSpan = document.createElement('span');
+                numberSpan.className = 'contact-number';
+                numberSpan.innerText = input;
+        
+                // Append avatar and number to contactDiv
+                contactDiv.appendChild(avatar);
+                contactDiv.appendChild(numberSpan);
+        
+                // Append the new contact to the contact list
+                contactList.appendChild(contactDiv);
+            }
+        
+            // Check if Enter key is pressed
+            if (event.key === 'Enter') {
+                openChat(input,"","");
+            }
+        }
+
+        
+    </script>
+    
+    
+    <!--light color random-->
+    <script>
+      const lightColors = [
+          "#B3E5FC", "#C8E6C9", "#FFEB3B", "#FFCDD2", "#E1F5FE", "#F0F4C3",
+          "#FFCCBC", "#D1C4E9", "#C8B2FF", "#B2DFDB", "#FFEBEE", "#B2DFDB"
+        ];
+        function getLetterColor(letter) {
+            let letterLower = letter.toLowerCase();
+            let index = letterLower.charCodeAt(0) - 97;  // 'a' = 97, so we can map 'a' -> 0, 'b' -> 1, etc.
+  
+              // Ensure the index is within the bounds of the lightColors array
+              index = Math.abs(index % lightColors.length);
+              
+              return lightColors[index];
+        }
+        
+    </script>
+    
+    <script>
+        // Fetch contacts on page load
+        document.addEventListener("DOMContentLoaded", function() {
+            loadContacts();
+        });
+
+        function loadContacts() {
+            fetch('/contacts')
+                .then(response => response.json())
+                .then(data => {
+                    let contactList = document.getElementById('contactList');
+                    contactList.innerHTML = ''; // Clear previous contacts
+
+                    data.forEach(contact => {
+                        // Use the `last_message` field directly from the contact object
+                        // let lastMessage = contact.last_message || 'No messages yet';
+                        
+                         let lastMessage = '';
+                        if (contact.type === 'text') {
+                            lastMessage = `<div class="last-message ms-1 text-truncate" style="max-width: 100px;">${contact.last_message}</div>`;
+                        } else if (contact.type === 'image') {
+                            lastMessage = `<span class="d-flex gap-1">
+                                                <span class="mdi mdi-image-area text-muted"></span>
+                                                <span>Image</span>
+                                            </span>`;
+                        } else if (contact.type === 'video') {
+                            lastMessage = `<span class="d-flex gap-1">
+                                                <span class="mdi mdi-video text-muted"></span>
+                                                <span>Video</span>
+                                            </span>`;
+                        } else if (contact.type === 'audio') {
+                            lastMessage = `<span class="d-flex gap-1">
+                                                <span class="mdi mdi-microphone text-muted"></span>
+                                                <span>Audio</span>
+                                            </span>`;
+                        }else if (contact.type === 'document') {
+                            lastMessage = `<span class="d-flex gap-1">
+                                                <span class="mdi mdi-file-document text-muted"></span>
+                                                <span class="text-truncate" style="max-width: 120px;">${contact.media_caption || 'Document'}</span>
+                                            </span>`;
+                        }  else if (contact.type === 'sticker') {
+                            lastMessage = `<span class="d-flex gap-1">
+                                                <span class="mdi mdi-sticker text-muted"></span>
+                                                <span>Sticker</span>
+                                            </span>`;
+                        } else {
+                            lastMessage = `<span> </span>`;
+                        }
+                        
+
+                        let contactDiv = document.createElement('div');
+                        contactDiv.className = 'contact';
+                        contactDiv.onclick = function() { 
+                            highlightContact(this); 
+                            openChat(contact.phone,contact.lead_name,contact.sno);
+                            changeCountStatus(contact.sno);
+                        };
+                        
+                        const messageDate = new Date(contact.last_message_time);
+    
+                        // Format the time to 12-hour format with AM/PM
+                         const formattedTime = messageDate.toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true
+                        });
+
+                        // Get current date details
+                        const today = new Date();
+                        const yesterday = new Date();
+                        yesterday.setDate(today.getDate() - 1);
+
+                        // Calculate the start of the current week (Sunday)
+                        const startOfWeek = new Date(today);
+                        startOfWeek.setDate(today.getDate() - today.getDay()); // Set the date to Sunday of the current week
+
+                        // Calculate the date 7 days ago
+                        const sevenDaysAgo = new Date(today);
+                        sevenDaysAgo.setDate(today.getDate() - 7); // 7 days ago from today
+
+                        // Format dates for comparison
+                        const messageDateString = messageDate.toDateString();
+                        const todayString = today.toDateString();
+                        const yesterdayString = yesterday.toDateString();
+
+                        // Get the day of the week for the message date
+                        const messageDayOfWeek = messageDate.getDay(); // Sunday = 0, Monday = 1, ...
+
+                        // Display logic
+                        let displayDate = "";
+
+                        if (messageDateString === todayString) {
+                            displayDate = formattedTime; // No date display for today
+                        } else if (messageDateString === yesterdayString) {
+                            displayDate = "Yesterday"; // If it's yesterday, display "Yesterday"
+                        } else if (messageDate >= sevenDaysAgo && messageDate <= today) {
+                            const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                            displayDate = daysOfWeek[messageDayOfWeek]; // Display the weekday name (e.g., "Saturday")
+                        } else {
+                            const day = String(messageDate.getDate()).padStart(2, '0'); // Ensure 2 digits for day
+                            const month = String(messageDate.getMonth() + 1).padStart(2, '0'); // Ensure 2 digits for month
+                            const year = messageDate.getFullYear();
+                            displayDate = `${day}/${month}/${year}`;
+                        }
+
+                        let lead_name=contact.lead_name;
+                        
+                        let avatar = document.createElement('div');
+                        avatar.className = 'contact-avatar';
+                        avatar.innerHTML = lead_name ? 
+                          `<span class="avatar-letter" style="background-color: ${getLetterColor(lead_name[0])}">${lead_name[0].toUpperCase()}</span>` : 
+                          '<span class="unknwn_acn mdi mdi-account fs-4"></span>';
+
+                        let infoDiv = document.createElement('div');
+                        infoDiv.className = 'contact-info';
+                        infoDiv.innerHTML = `
+                                <div class="d-flex justify-content-between align-items-center ">
+                                    <strong class="">${contact.lead_name || contact.phone} </strong>
+                                    <span class="text-dark fs-8" style="color: ${contact.msg_count > 0 ? '#26d367' : ''} !important;">
+                                        ${displayDate ? displayDate : ""}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="last-message ms-1 fs-7 text-truncate ${contact.msg_count > 0 ? 'text-black': 'text-dark' }" style="max-width: 140px;" >
+                                        ${lastMessage || ''}
+                                    </div>
+                                    <span class="badge rounded-circle unread-count fs-8 fw-bold" >${contact.msg_count>0?contact.msg_count:""}</span>
+                                </div>
+                            `;
+                        contactDiv.appendChild(avatar);
+                        contactDiv.appendChild(infoDiv);
+                        contactList.appendChild(contactDiv);
+                    });
+                })
+                .catch(error => console.error('Error loading contacts:', error));
+        }
+
+        function changeCountStatus(contact_id){
+    
+            fetch('/read_message/' + contact_id, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}' // Include CSRF token if using Laravel CSRF protection
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 200) {
+                } else {
+
+                    console.error(data.error_msg);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+
+        }
+
+
+    </script>
+      <script>
+             const attachmentBtn = document.getElementById("attachmentBtn");
+             const attachmentContainer = document.getElementById("attachmentContainer");
+             let attachmentDiv = document.createElement('div');
+                attachmentDiv.className = 'attachment-list';
+    
+                attachmentDiv.innerHTML = `
+                <div class="text-center d-flex flex-column gap-2" >
+                    <div class="fs-6 d-flex gap-2" onclick="document.getElementById('fileInput').click()">
+                        <span class="mdi mdi-file-document" style="color:#7f66ff;"></span>
+                        <span class="">Document</span>
+                    </div>
+                    <div class="fs-6 d-flex gap-2" onclick="document.getElementById('fileInput').click()">
+                        <span class="mdi mdi-image-multiple" style="color:#007bfc;"></span>
+                        <span class="">Photo</span>
+                    </div>
+                    <div class="fs-6 d-flex gap-2" onclick="document.getElementById('fileInput').click()">
+                        <span class="mdi mdi-video" style="color:#fe2e74;"></span>
+                        <span class="">Video</span>
+                    </div>
+                   
+                </div>
+               `;
+    
+                attachmentContainer.appendChild(attachmentDiv);
+        </script>
+
+    <script>
+     document.addEventListener("DOMContentLoaded", function () {
+        const emojiButton = document.getElementById("emojiButton");
+        const emojiPickerContainer = document.getElementById("emojiPicker");
+        const messageInput = document.getElementById("messageInput");
+        const sendButton = document.getElementById("sendButton"); // Make sure you have this button in your HTML
+        
+          const attachmentButton = document.getElementById("attachmentBtn");
+        const attachmentContain= document.getElementById("attachmentContainer");
+
+        // Initialize EmojiMart Picker
+        const picker = new EmojiMart.Picker({
+            set: "apple",
+            previewPosition: "none",
+            onEmojiSelect: (emoji) => {
+                messageInput.value += emoji.native; // Insert emoji into input
+                undisbale_func(messageInput.value); // Call function to enable send button
+                toggleEmojiPickerInp(false); // Hide picker after selection
+            }
+        });
+
+        emojiPickerContainer.appendChild(picker);
+
+        // Function to toggle emoji picker
+        function toggleEmojiPickerInp(show) {
+            if (show) {
+                emojiPickerContainer.style.display = "block";
+                emojiButton.classList.add("rotate");
+                emojiButton.classList.replace("mdi-emoticon", "mdi-close-circle");
+            } else {
+                emojiPickerContainer.style.display = "none";
+                emojiButton.classList.remove("rotate");
+                emojiButton.classList.replace("mdi-close-circle", "mdi-emoticon");
+            }
+        }
+
+        // Toggle Emoji Picker on button click
+        emojiButton.addEventListener("click", function (event) {
+            event.stopPropagation();
+            const isPickerOpen = emojiPickerContainer.style.display === "block";
+            toggleEmojiPickerInp(!isPickerOpen);
+        });
+
+        // Hide picker when clicking outside
+        document.addEventListener("click", function (event) {
+            if (!emojiPickerContainer.contains(event.target) && event.target !== emojiButton) {
+                toggleEmojiPickerInp(false);
+            }
+        });
+        
+         // Toggle Atachment on button click
+       
+         function toggleAttachmentInp(show) {
+            if (show) {
+                attachmentContain.style.display = "block";
+                attachmentButton.classList.add("rotate");
+                attachmentButton.classList.replace("mdi-attachment", "mdi-close-circle");
+            } else {
+                attachmentContain.style.display = "none";
+                attachmentButton.classList.remove("rotate");
+                attachmentButton.classList.replace("mdi-close-circle", "mdi-attachment");
+            }
+        }
+
+        attachmentButton.addEventListener("click", function (event) {
+            event.stopPropagation();
+            const isAttachmentOpen = attachmentContain.style.display === "block";
+            toggleAttachmentInp(!isAttachmentOpen);
+        });
+
+        // Hide picker when clicking outside
+        document.addEventListener("click", function (event) {
+            if (!attachmentContain.contains(event.target) && event.target !== attachmentButton) {
+                toggleAttachmentInp(false);
+            }
+        });
+        
+
+        // Function to enable/disable send button
+        function undisbale_func(value) {
+            if (value.trim().length > 0) {
+                sendButton.removeAttribute("disabled");
+            } else {
+                sendButton.setAttribute("disabled", "true");
+            }
+        }
+    });
+</script>
+
+<!-- contact Details -->
+ <script>
+   document.addEventListener("DOMContentLoaded", function () {
+        let contactDetailsDiv = document.querySelector('#contact_details');
+
+        document.addEventListener("click", function (event) {
+            let contactHeaderInfo = event.target.closest(".chat-header-content"); // Check if clicked element is inside
+            if (contactHeaderInfo) {
+                let hidden_contact_no = document.querySelector('#hidden_contact_no').value;
+                contactDetailsDiv.style.display = (contactDetailsDiv.style.display === "none" || !contactDetailsDiv.style.display) ? "block" : "none";
+                if(contactDetailsDiv.style.display == "block"){
+                    fetchContactInfo(hidden_contact_no);
+                }
+            }
+        });
+    });
+
+    function closeContactInfo(){
+        let contactDetailsDiv = document.querySelector('#contact_details');
+        contactDetailsDiv.style.display = (contactDetailsDiv.style.display === "none" || !contactDetailsDiv.style.display) ? "block" : "none";
+    }
+
+
+    function fetchContactInfo(phone) {
+        fetch(`/contact_info/${phone}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && Object.keys(data).length > 0) { // Check if data is not empty
+                    appendContactInfo(data);
+                }
+            })
+            .catch(error => console.error("Error fetching contact info:", error));
+    }
+
+    function appendContactInfo(info) {
+        let chatDetailsInfo = document.getElementById('chatDetailsInfo');
+
+        // Clear previous content if needed
+        chatDetailsInfo.innerHTML = '';
+
+        console.log("name",info.lead_name)
+
+        let status =info.status == 0 ? 'Active' :
+                    (info.status == 1 ? 'InActive' :
+                    (info.status == 2 ? 'Deleted' :
+                    (info.status == 5 ? 'Drop' :
+                    (info.status == 7 ? 'Spam' :
+                    (info.status == 4 ? 'Customer' :
+                    (info.status == 10 ? 'Old Customer' :
+                    (info.status == 6 ? 'Mobile Lead' :'-')))))));
+                    let status_color = 
+                        info.status == 0 ? 'background-color: #7239ea; color: white;' :
+                        info.status == 1 ? 'background-color: #ffc700; color: black;' :
+                        info.status == 2 ? 'background-color: #ff4d49; color: white;' :
+                        info.status == 5 ? 'background-color: #ff4d49; color: white;' :
+                        info.status == 7 ? 'background-color: #39484f; color: white;' :
+                        info.status == 4 ? 'background-color: #51cd89; color: black;' :
+                        info.status == 10 ? 'background-color: #ffc700; color: black;' :
+                        info.status == 6 ? 'background-color: transparent; color: black;' : '';
+
+        let contactInfoDiv = document.createElement('div');
+        contactInfoDiv.className = 'contact_info';
+        contactInfoDiv.innerHTML = `
+            <div class="info-content d-flex flex-column gap-2 justify-content-center align-items-center">
+                <div class="info-content-img fw-bold fs-5">
+                ${info.lead_name ?
+                    `<span class="avatar-letter" style="background-color: ${getLetterColor(info.lead_name[0])}">${info.lead_name[0].toUpperCase()}</span>` : 
+                    '<span class="unknwn_acn mdi mdi-account fs-4"></span>'
+                }
+                </div>
+                <strong class="text-black"> ${info.lead_name || ''}</strong>
+                <span> ${info.phone || ''}</span>
+                <span> ${info.lead_email_id || ''}</span>
+                <span class="badge rounded" style="${status_color}"> ${status}</span>
+            </div>
+        `;
+
+        chatDetailsInfo.appendChild(contactInfoDiv);
+    }
+    
+ </script>
+ <script>
+      function showFullImage(imageUrl) {
+          $('#img_show').show();
+          $('#video_show').hide();
+          document.getElementById('fullImage').src = imageUrl;
+          new bootstrap.Modal(document.getElementById('imageModal')).show();
+      }
+      
+      function showVideo(videoUrl) {
+        // Show the modal
+        $('#common_modal').show();
+    
+        // Pause the existing video if it's playing
+        var videoMsg = document.getElementById('videoMsg');
+        if (videoMsg) {
+            videoMsg.pause();
+        }
+    
+        // Get the video container and clear it
+        let VideoContainer = document.getElementById('common_modal');
+    
+        // Clear the existing video Div content
+        let existingVideoDiv = VideoContainer.querySelector('.videoDiv');
+        if (existingVideoDiv) {
+            existingVideoDiv.remove(); // Remove the previous video div
+        }
+    
+        // Create a new video element
+        let VideoDiv = document.createElement('div');
+        VideoDiv.className = "videoDiv";
+    
+        let videoPlayerDiv = `
+            <video controls id="videoMsg">
+                <source src="${videoUrl}" type="video/mp4">
+            </video>
+        `;
+        VideoDiv.innerHTML = videoPlayerDiv;
+    
+        // Append the new video
+        VideoContainer.appendChild(VideoDiv);
+    }
+ </script>
+
+<script>
+
+    function delete_msg_func(message_id) {
+        $('#hidden_message_id').val(message_id)
+          new bootstrap.Modal(document.getElementById('kt_modal_delete_message')).show();
+      }
+
+    function deleteForMeMessge(){
+        let message_id =$('#hidden_message_id').val()
+        fetch('/delete_for_message/' + message_id, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}' // Include CSRF token if using Laravel CSRF protection
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+            } else {
+                console.error(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+
+    }
+</script>
+
+
+<script>
+     function sendSyllabusMessage() {
+        // $('#lead_name_document').html(name);
+        // $('#lead_phone_document').html(mobile);
+        // $('#lead_id_document').val(leadId); // Set the lead ID in the hidden input field
+        $('#kt_modal_syllabus_document_send').modal('show'); // Show the modal
+    }
+
+    
+    function sendSyllabus_func(){
+        $('#sendSyllabusDocumentBtn').prop('disabled', true);
+        var err=0;
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        const lead_mobile = $('#lead_id_document').val();
+        const course_id_msg = $('#course_id_msg').val();
+        const course_type_id_msg = $('#course_type_id_msg').val();
+        if (course_type_id_msg === "") {
+            document.getElementById('course_type_id_msg_err').innerHTML = 'Course Type is required...!';
+            document.getElementById('course_type_id_msg').classList.add('error_msg');
+            err++;
+        } else {
+            document.getElementById('course_type_id_msg').classList.remove('error_msg');
+            document.getElementById('course_type_id_msg_err').innerHTML = '';
+        }
+
+        if (course_id_msg === "") {
+            document.getElementById('course_id_msg_err').innerHTML = 'Course is required...!';
+            document.getElementById('course_id_msg').classList.add('error_msg');
+            err++;
+        } else {
+            document.getElementById('course_id_msg').classList.remove('error_msg');
+            document.getElementById('course_id_msg_err').innerHTML = '';
+        }
+        
+
+        if(err==0){
+            $('#sendSyllabusDocumentBtn').prop('disabled', true);
+            $.ajax({
+                url: '/send_syllabus_message',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                }, // Replace with your backend URL
+                method: 'POST',
+                data: JSON.stringify({
+                    lead_mobile: lead_mobile,
+                    course_id: course_id_msg,
+                    
+                }),
+                success: function(response) {
+                    if (response.status === 200) {
+                        // location.reload(); // Reload the page to update the UI
+                        $('#kt_modal_syllabus_document_send').modal('hide');
+                        // console.log(response)
+                        $('#sendSyllabusDocumentBtn').prop('disabled', false);
+                    } else {
+                        $('#sendSyllabusDocumentBtn').prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    const errorMsg = xhr.responseJSON?.message || 'Failed to send the message.';
+                    $('#sendSyllabusDocumentBtn').prop('disabled', false);
+                }
+            });
+            
+        }else{
+            $('#sendSyllabusDocumentBtn').prop('disabled', false);
+            return false;
+        }
+
+        
+    }
+    
+    $.ajax({
+        url: "{{ route('course_type') }}",
+        type: "GET",
+        success: function(response) {
+            if (response.status === 200 && response.data) {
+                var selectDropdown = $('#course_type_id_msg');
+                selectDropdown.empty().append('<option value="">Select Course Type</option>');
+                response.data.forEach(function(level) {
+                    selectDropdown.append($('<option></option>').attr('value', level.sno).text(level.course_type_name));
+                });
+            } else {
+                console.error('Error fetching course types:', response);
+            }
+        },
+        error: function(error) {
+            console.error('Error fetching course types:', error);
+        }
+    });
+    
+    function course_type_change_func(value){
+            var courseTypeId = value;
+        
+            if (courseTypeId) {
+                $.ajax({
+                    url: "{{ route('get_course') }}",
+                    type: "GET",
+                    data: { course_type_id: courseTypeId },
+                    success: function(response) {
+                        if (response.status === 200 && response.data) {
+                            var selectDropdown = $('#course_id_msg');
+                            selectDropdown.empty().append('<option value="">Select Course</option>');
+                            response.data.forEach(function(course) {
+                                selectDropdown.append($('<option></option>').attr('value', course.sno).text(course.course_name).data('course_name', course.course_name));
+                            });
+                        } else {
+                            console.error('Error fetching courses:', response);
+                        }
+                    },
+                    error: function(error) {
+                        console.error('Error fetching courses:', error);
+                    }
+                });
+            } else {
+                $('#course_id_msg').empty().append('<option value="">Select Course</option>');
+            }
+    }
+
+</script>
+
+<script>
+    function closeCommonModal(){
+        $('#common_modal').hide();
+    }
+</script>
+
+
+
+@endsection
