@@ -1,0 +1,2397 @@
+
+
+<?php
+ $this->load->view('common_header'); 
+$date_format =common_date_format();  ?>
+       <style type="text/css">
+
+            .no-js #loader { display: none;  }
+            .js #loader { display: block; position: absolute; left: 100px; top: 0; }
+            .se-pre-con {
+               position: fixed;
+               left: 0px;
+               top: 0px;
+               width: 100%;
+               height: 100%;
+               z-index: 9999;
+               /*background: url("http://smallenvelop.com/wp-content/uploads/2014/08/Preloader_2.gif") center no-repeat #fff;*/
+            }
+            .fancybox img { 
+               border: 1px solid #8c8c8c;padding: 2px; 
+            }
+            #log_details_box {
+                display: inline-block;
+                width: 180px;
+                white-space: nowrap;
+                overflow: hidden !important;
+                text-overflow: ellipsis;
+            }
+
+       </style>
+            <div class="m-grid__item m-grid__item--fluid m-wrapper">
+               <!-- BEGIN: Subheader -->
+               <div class="m-subheader ">
+                  <div class="d-flex align-items-center">   
+                     <div class="mr-auto">
+                        <ul class="m-subheader__breadcrumbs m-nav m-nav--inline">
+                           <li class="m-nav__item m-nav__item--home">
+                              <a href="<?php echo base_url(); ?>Dashboard" class="m-nav__link m-nav__link--icon">
+                                 <i class="m-nav__link-icon fa fa-home"></i>
+                              </a>
+                           </li>
+                           <li class="m-nav__separator"><i class="fa fa-angle-double-right"></i></li>
+                           <li class="m-nav__item">
+                              <a href="javascript:;" class="m-nav__link">
+                                 <span class="m-nav__link-text">Voucher</span>
+                              </a>
+                           </li>
+                           <li class="m-nav__separator"><i class="fa fa-angle-double-right"></i></li>
+                           <li class="m-nav__item">
+                              <a href="javascript:;" class="m-nav__link">
+                                 <span class="m-nav__link-text">Voucher Edit</span>
+                              </a>
+                           </li>
+                        </ul>
+                     </div>
+                     <?php if($this->session->flashdata('l_view_success')) { ?>
+                  <div class="alert alert-success alert-dismissible" role="alert" id="alertaddmessage">
+                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                     </button>
+                     <?php echo $this->session->flashdata('l_view_success'); ?>
+                  </div>
+                  <?php } ?>
+                  <?php if($this->session->flashdata('mail_success')){?>
+                       <div class="alert alert-success alert-dismissible" role="alert" id="alertaddmessage">
+                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                     </button>
+                     <?php echo $this->session->flashdata('mail_success'); ?>
+                  </div>
+                  <?php } ?>
+                  <?php if($this->session->flashdata('mail_err')){?>
+                       <div class="alert alert-danger alert-dismissible" role="alert" id="alertaddmessage">
+                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                     </button>
+                     <?php echo $this->session->flashdata('mail_err'); ?>
+                  </div>
+                  <?php } ?>
+                  <?php if($this->session->flashdata('mail_reply_sent')){ ?>
+                       <div class="alert alert-danger alert-dismissible" role="alert" id="alertaddmessage">
+                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                     </button>
+                     <?php echo $this->session->flashdata('mail_reply_sent'); ?>
+                  </div>
+                  <?php } ?>
+                  </div>
+               </div>
+                  
+               <!-- END: Subheader -->
+               <div class="m-content">
+                
+                  <!--Begin::Section-->
+                  <div class="row">
+                     <div class="col-xl-12">
+                        <div class="m-portlet m-portlet--mobile ">
+                           <div class="m-portlet__head">
+                              <div class="m-portlet__head-caption">
+                                 <div class="m-portlet__head-title">
+                                    <h3 class="m-portlet__head-text">
+                                    Update Voucher
+                                    </h3>
+                                 </div>
+                            
+                              </div>
+                              
+                              <!-- <div class="m-portlet__head-tools">
+                                 <ul class="m-portlet__nav">
+                                    <li class="m-portlet__nav-item">
+                                       <a href="<?php //echo base_url(); ?>Receipts" class="btn btn-primary m-btn m-btn--custom m-btn--icon m-btn--air">
+                                          <span>
+                                             <i class="la la-angle-double-left"></i>
+                                             <span>Back</span>
+                                          </span>
+                                       </a>
+                                    </li>
+                                 </ul>
+                              </div> -->
+                           </div>
+                           <?php if($this->session->flashdata('voucher_success')){?>
+                            <div class="alert alert-success alert-dismissible fade show" role="alert" id="alertaddmessage">
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    </button>
+                                    <?php echo $this->session->flashdata('voucher_success'); ?>
+                            </div>
+                            <?php } ?>
+                            <?php if($this->session->flashdata('voucher_err')){?>
+                                        <div class="alert alert-danger alert-dismissible fade show" role="alert" id="alertaddmessage">
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                </button>
+                                <?php echo $this->session->flashdata('voucher_err'); ?>
+                            </div>
+                            <?php } ?>
+                           <form method="POST" action="<?php echo base_url(); ?>VoucherAccounts/update_voucher/<?php echo $voucher_id;?>" enctype="multipart/form-data"  onsubmit="return voucher_validation();">
+                            <div class="m-portlet__body">
+                                <div class="row">
+                                    <div class="col-lg-3">
+                                        <div class="form-group m-form__group">
+                                            <label>Date<span class="text-danger">*</span></label>
+                                            <input type="text" id="date" name="date" class="form-control  m-input m-input--square m_datepicker_1" placeholder="Enter Date" readonly value="<?php echo $voucher_details->voucher_date ?  date($date_format, strtotime($voucher_details->voucher_date)) : date('d-m-Y');?>">
+                                            <span class="text-danger" id="date_err"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="form-group m-form__group">
+                                            <label>Company Name<span class="text-danger">*</span></label>
+                                            <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="company_id" id="company_id" onchange="get_bank_details_from_comp();">
+                                            <option value="">Select Company</option>
+                                                        <?php foreach ($company_list as $vflist) {
+                                                          if($vflist['status']==0){ ?>
+                                                          <option value="<?php echo $vflist['exporter_id']; ?>" <?php echo $voucher_details->company_id == $vflist['exporter_id'] ? 'selected' : ''; ?> ><?php echo $vflist['exporter_name']; ?></option>
+                                                        <?php }}?>
+                                          </select>
+                                            </select>
+                                            <span class="text-danger" id="company_id_err"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="form-group m-form__group">
+                                            <label>Bank Accounts<span class="text-danger">*</span></label>
+                                            <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="bank_details_id" id="bank_details_id">
+                                            <option value="">Select Bank</option>
+                                            </select>
+                                            <span class="text-danger" id="bank_details_id"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="form-group m-form__group">
+                                            <label>Ledger Heads<span class="text-danger">*</span></label>
+                                            <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="ledger_head_id" id="ledger_head_id">
+                                                <option value="">Choose Ledger Heads</option>
+                                           
+                                            </select>
+                                            <span class="text-danger" id="ledger_head_id_err"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 mt-4">
+                                        <div class="form-group m-form__group">
+                                            <div class="m-radio-inline">
+                                                <label class="m-radio m-radio--bold m-radio--success">
+                                                    <input type="radio" name="dr_cr" id="dr_cr" value="debit" <?php if($voucher_details->debit_credit =='debit'){ echo "checked";}?>>Debit
+                                                    <span></span>
+                                                </label>
+                                                <label class="m-radio m-radio--bold m-radio--success">
+                                                    <input type="radio"  name="dr_cr" id="dr_cr" value="credit" <?php if($voucher_details->debit_credit =='credit'){ echo "checked";}?>>Credit
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                            <span class="text-danger" id="dr_cr_err"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 mt-4">
+                                        <div class="form-group m-form__group">
+                                            <div class="m-radio-inline">
+                                                <label class="m-radio m-radio--bold m-radio--success">
+                                                    <input type="radio" checked name="act_pro" id="act_pro" value="actual" <?php if($voucher_details->actual_projection =='actual'){ echo "checked";}?>>Actuals
+                                                    <span></span>
+                                                </label>
+                                                <label class="m-radio m-radio--bold m-radio--success">
+                                                    <input type="radio" name="act_pro"  id="act_pro"  value="projection" <?php if($voucher_details->actual_projection =='projection'){ echo "checked";}?>>Projection
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                            <span class="text-danger" 
+                                            id="act_pro_err"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="form-group m-form__group">
+                                            <!-- <label style="display: inline-block;">Buyer Order<span class="text-danger" id="buyer_mandotory" style="display:none">*</span></label> -->
+                                            <label>Buyer Order<span class="text-danger" id="buyer_mandotory"></span></label>
+
+                                            <select class="form-control m-bootstrap-select m_selectpicker"
+                                                data-live-search="true" name="buyer_order_id" id="buyer_order_id"
+                                                onchange="get_delivery_invoice_details()">
+                                                <option value="">Choose Buyer Order</option>
+                                                <!-- < ?php foreach ($buyer_order_list as $bo_list) {
+                                                            ?>
+                                                <option value="< ?php echo $bo_list['buyer_order_id']; ?>">
+
+                                                    < ?php echo $bo_list['order_no']; ?> -
+                                                    < ?php echo $bo_list['buyer_order_invoice_no'].'-'.$bo_list['country_name'].'-'.$bo_list['lead_name']; ?>
+                                                </option>
+                                                < ?php }?> -->
+                                            </select>
+
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3" id="di_block" style="display:none;">
+                                        <div class="form-group m-form__group">
+                                            <label>Delivery Invoice</label>
+                                            <select class="form-control m-bootstrap-select m_selectpicker"
+                                                data-live-search="true" name="delivery_invoice_id" id="delivery_invoice_id">
+                                                <option value="">Select Delivery Invoice</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="form-group m-form__group">
+                                            <label>Type<span class="text-danger">*</span></label>
+                                            <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="type_dn_box" id="type_dn_box" onchange="type_dropdown_box();">
+                                               <option value="" <?php if($voucher_details->voucher_type=='') {echo "selected";}?>>Choose Type</option>
+                                               <option value="buyer" <?php if($voucher_details->voucher_type=='buyer') {echo "selected";}?>>Buyer</option>
+                                               <option value="vendor" <?php if($voucher_details->voucher_type=='vendor') {echo "selected";}?>>Vendor</option>
+                                               <option value="staff" <?php if($voucher_details->voucher_type=='staff') {echo "selected";}?>>Staff</option>
+                                               <option value="internal loan" <?php if($voucher_details->voucher_type=='internal loan') {echo "selected";}?>>Internal Loan</option>
+                                               <option value="FD Interest" <?php if($voucher_details->voucher_type=='FD Interest') {echo "selected";}?>>FD Interest</option>
+                                               <option value="Deposit" <?php if($voucher_details->voucher_type=='Deposit') {echo "selected";}?>>Deposit</option>
+                                               <option value="others" <?php if($voucher_details->voucher_type=='others') {echo "selected";}?>>Others</option>
+                                            </select>
+                                            <span class="text-danger" id="type_dn_box_err"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <div class="form-group m-form__group">
+                                            <label>Payment Mode<span class="text-danger">*</span></label>
+                                            <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="payment_mode" id="payment_mode" onchange="showhide_cheque();">
+											   <option value="">Choose Payment Mode</option>
+												<option value="Cheque" <?php if($voucher_details->payment_mode=='Cheque') {echo "selected";}?>>Cheque</option>
+												<option value="NEFT" <?php if($voucher_details->payment_mode=='NEFT') {echo "selected";}?>>NEFT</option>
+												<option value="RTGS" <?php if($voucher_details->payment_mode=='RTGS') {echo "selected";}?>>RTGS</option>
+												<option value="Electronic" <?php if($voucher_details->payment_mode=='Electronic') {echo "selected";}?>>Electronic</option>
+												<option value="Others" <?php if($voucher_details->payment_mode=='Others') {echo "selected";}?>>Others</option>
+                                            </select>
+                                            <span class="text-danger" id="payment_mode_err"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="buyer_box" style="display:none;">
+                                    <div class="row">
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Invoice No</label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Invoice No" name="invoice_no" id="invoice_no" maxlength="60" autocomplete="off">
+                                               <input type="hidden" class="form-control m-input m-input--square" placeholder="Enter Invoice No" name="invoice_id" id="invoice_id" maxlength="60" autocomplete="off">
+                                               <span class="text-danger" id="invoice_no_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label id="buyer_bal_lbl">Balance Amount(IN INR)</label>
+                                                <input type="text"
+                                                    class="form-control form-control-solid m-input m-input--square" readonly
+                                                    name="balance_amount" id="balance_amount" maxlength="60"
+                                                    autocomplete="off">
+                                                <input type="hidden" class="form-control m-input m-input--square"
+                                                    placeholder="Enter Invoice No" name="invoice_id" id="invoice_id"
+                                                    maxlength="60" autocomplete="off">
+                                                <span class="text-danger" id="invoice_no_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount Received<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount Received" name="buyer_amount" id="buyer_amount" maxlength="60" autocomplete="off" value="<?php echo $voucher_details->total_voucher_amount; ?>">
+                                               <span class="text-danger" id="buyer_amount_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label>Currency<span class="text-danger">*</span></label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="currency_id" id="currency_id">
+                                                   <option value="">Choose Currency</option>
+                                                   <?php if(!empty($currency_list))
+                                                    {
+                                                        foreach ($currency_list as $vflist) { ?>
+                                                        <option value="<?php echo $vflist['currency_id']; ?>" id="<?php echo $vflist['currency_code']; ?>" <?php echo $vflist['currency_id']==$voucher_details->currency_id ? 'selected' : '';?>><?php echo $vflist['currency_name']; ?> - <?php echo $vflist['currency_code']; ?></option>
+                                                        <?php }
+                                                    } ?>
+                                                </select>
+                                                <span class="text-danger" id="currency_id_err"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="forw_chk" style="display:none;">
+                                    <div class="row mt-2">
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label class="m-checkbox m-checkbox--bold m-checkbox--state-info">
+                                                    <input type="checkbox" id="forward_contract_list"
+                                                        class="submenu_checkbox" name="fc_chk" value="1" <?php echo $voucher_details->fc_id!='' ? 'checked' : '';?> data-toggle="modal"
+                                                        onclick="fw_cont_lst();">Forward Contract
+                                                    <!-- data-target="#add_more_fc_details" -->
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="forward_contract_box" style="display:none;">
+                                    <div class="row mt-2">
+                                        <div class="col-lg-3">
+                                            <input type="hidden" name="edit_fc_id" value="<?php echo $voucher_details->fc_id ?? '';?>">
+                                            <div class="form-group m-form__group">
+                                                <label>Forward Contract<span class="text-danger">*</span></label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="fc_id" id="fc_id" onchange="get_fc_details();">
+                                                   <option value="">Choose Forward Contract</option>
+                                                   <?php foreach ($forward_contract_list as $fclist) {
+                                                          ?>
+                                                          <option value="<?php echo $fclist['fc_id']; ?>" <?php echo $voucher_details->fc_id==$fclist['fc_id'] ? 'selected' : '';?>><?php echo $fclist['fc_no']; ?> - <?php echo $fclist['user_fc_no']; ?></option>
+                                                        <?php }?>
+                                                </select>
+                                                <span class="text-danger" id="fc_id_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 mt-4">
+                                            <div class="row">
+                                                <label class="col-lg-4">Balance &nbsp;&nbsp;: </label>
+                                                <p class="col-lg-6">
+                                                    <label class="text-theme" id="fc_balance" name="fc_balance">3000.00</label>
+                                                </p>
+                                            </div>
+                                            <div class="row">
+                                                <label class="col-lg-4">Per USD &nbsp;&nbsp;&nbsp;: </label>
+                                                <p class="col-lg-6">
+                                                    <label class="text-theme" id="fc_rate_lbl" name="fc_rate_lbl">81.08</label>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount to Process(In USD)<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount" name="fc_amount_usd" id="fc_amount_usd" maxlength="60" autocomplete="off" onkeyup="getAmountInINR(0);" onfocus="this.select();" value="<?php echo $voucher_details->fc_amount_usd ?? 0;?>" >
+                                               <span class="text-danger" id="fc_amount_usd_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Rate Per USD<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Rate Per USD" name="fc_rate" id="fc_rate" maxlength="60" autocomplete="off"  onkeyup="getAmountInINR(0);" onfocus="this.select();" value="0">
+                                               <span class="text-danger" id="fc_rate_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount(In INR)<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount(In INR)" name="fc_amount_inr" id="fc_amount_inr" maxlength="60" autocomplete="off"  value="<?php echo $voucher_details->fc_amount_inr;?>">
+                                               <span class="text-danger" id="fc_amount_inr_err"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                </div>
+                               
+                                <div id="pcfc_chk_box" style="display:none;">
+                                    <div class="row mt-2">
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label class="m-checkbox m-checkbox--bold m-checkbox--state-info">
+                                                    <input type="checkbox" id="pcfc_list" name="pcfc_chk" class="submenu_checkbox" value="1" <?php echo $voucher_details->pcfc_id >0 ? 'checked' : '';?>
+                                                        data-toggle="modal" onclick="pcfc_lst();">PCFC
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="pcfc_box" style="display:none;">
+                                    <div class="row mt-2">
+                                        <div class="col-lg-3">
+                                            <input type="hidden" name="edit_pcfc_id" value="<?php echo $voucher_details->pcfc_id ?? '';?>">
+                                            <div class="form-group m-form__group">
+                                                <label>PCFC<span class="text-danger">*</span></label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="pcfc_id" id="pcfc_id" onchange="get_pcfc_details();">
+                                                   <option value="">Choose PCFC</option>
+                                                        <?php foreach ($pcfc_list as $pcfclist) {
+                                                                                ?>
+                                                        <option value="<?php echo $pcfclist['pcfc_id']; ?>" <?php echo $voucher_details->pcfc_id==$pcfclist['pcfc_id'] ? 'selected' : '';?>>
+                                                            <?php echo $pcfclist['user_pcfc_no'].'-'.$pcfclist['pcfc_no']; ?>
+                                                        </option>
+                                                        <?php }?>
+                                                </select>
+                                                <span class="text-danger" id="pcfc_id_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 mt-4">
+                                           <div class="row">
+                                                    <label class="col-lg-6">Balance(<span
+                                                            id="pcfccurrency_symbol"></span>) &nbsp;&nbsp;: </label>
+                                                    <p class="col-lg-6">
+                                                        <label class="text-theme" id="pcfc_balance"
+                                                            name="pcfc_balance[]">0.00</label>
+                                                    </p>
+                                                </div>
+                                                <div class="row">
+                                                    <label class="col-lg-6">Per <span
+                                                            id="pcfccurrency_lbl_symbol"></span>
+                                                        &nbsp;&nbsp;&nbsp;: </label>
+                                                    <p class="col-lg-6">
+                                                        <label id="pcfc_rate_lbl" class="text-theme">0.00</label>
+                                                    </p>
+                                                </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount to Process in PCFC(In USD)<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount" name="pcfc_amount_usd" id="pcfc_amount_usd" maxlength="60" autocomplete="off" onkeyup="getAmountInINR(0);"  onfocus="this.select();" value="<?php echo $voucher_details->pcfc_amount_usd;?>">
+                                               <span class="text-danger" id="pcfc_amount_usd_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Rate Per USD<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Rate Per USD" name="pcfc_rate" id="pcfc_rate" maxlength="60" autocomplete="off" onkeyup="getAmountInINR(0);"  onfocus="this.select();" >
+                                               <span class="text-danger" id="pcfc_rate_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount(In INR)<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount(In INR)" name="pcfc_amount_inr" id="pcfc_amount_inr" maxlength="60" autocomplete="off" value="<?php echo $voucher_details->pcfc_amount_inr;?>">
+                                               <span class="text-danger" id="pcfc_amount_inr_err"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                </div>
+                                <?php 
+                                if($voucher_details->eefc_id >0){
+                                    $eefcDetail = $this->db->query("SELECT before_eefc.* FROM before_eefc WHERE eefc_id = '".$voucher_details->eefc_id."' AND status='0'")->row();
+                                }else{
+                                    $eefcDetail='';
+                                }
+                                    
+                                ?>
+
+                                <div id="eefc_chk_box" style="display:none;">
+                                    <div class="row mt-2">
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label class="m-checkbox m-checkbox--bold m-checkbox--state-info">
+                                                    <input type="checkbox" id="eefc_list" name="eefc_chk" class="submenu_checkbox" value="1" <?php echo $voucher_details->eefc_id >0 ? 'checked' : '';?>
+                                                        data-toggle="modal" onclick="eefc_lst();">EEFC
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="eefc_box" style="display:none;">
+                                    <div class="row mt-2">
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <input type="hidden" name="edit_eefc_id" value="<?php echo $eefcDetail->eefc_id ?? '';?>">
+                                                <label>Manual EEFC No<span class="text-danger"></span></label>
+                                                <input type="text" id="eefc_manual_no" name="eefc_manual_no[]" class="form-control  m-input m-input--square" placeholder="Enter EEFC No" value="<?php echo $eefcDetail->eefc_manual_no ?? '';?>">
+                                                <span class="text-danger" id="eefc_id_err_1"></span>
+                                                <input type="hidden" id="eefc_company_hidden" value="<?php echo $eefcDetail->company_id ?? '';?>">
+                                                <input type="hidden" id="eefc_bank_id_hidden" value="<?php echo $eefcDetail->bank_id ?? '';?>">
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                                <div class="form-group m-form__group">
+                                                    <label>Bank Accounts<span class="text-danger">*</span></label>
+                                                    <select class="form-control m-bootstrap-select m_selectpicker"
+                                                        data-live-search="true" name="eefc_bank_details_id[]" id="eefc_bank_details_id"
+                                                        >
+                                                        <option value="">Select Bank</option>
+                                                    </select>
+                                                    <span class="text-danger" id="eefc_bank_id_err"></span>
+                                                </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="row">
+                                                <label>Currency<span class="text-danger">*</span></label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="currency_id_eefc[]" id="currency_id_eefc" >
+                                                <option value="">Choose Currency</option>
+                                                <?php
+                                                    if(!empty($currency_list))
+                                                    {
+                                                        foreach ($currency_list as $vflist) { ?>
+                                                        <option value="<?php echo $vflist['currency_id']; ?>" id="<?php echo $vflist['currency_code']; ?>" <?php echo $eefcDetail->currency_id==$vflist['currency_id'] ? 'selected' : '';?>><?php echo $vflist['currency_name']; ?> - <?php echo $vflist['currency_code']; ?></option>
+                                                        <?php }
+                                                    }
+                                                ?>
+                                                </select>
+                                                <span class="text-danger" id="eefc_currency_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label>Amount to Process <span
+                                                        id="currency_symbol_amt_eefc"></span><span
+                                                        class="text-danger">*</span></label>
+                                                <input type="hidden" class="form-control m-input m-input--square"
+                                                    name="final_eefc_bank_id[]" id="final_eefc_bank_id" value="">
+                                                    <input type="hidden" class="form-control m-input m-input--square"
+                                                    name="final_eefc_currency_id[]" id="final_eefc_currency_id" value="">
+                                                <input type="text" class="form-control m-input m-input--square"
+                                                    placeholder="Enter Amount" name="eefc_amount_usd[]"
+                                                    id="eefc_amount_usd" maxlength="60" autocomplete="off"
+                                                    onkeyup="getAmountInINR_popup(this.value,'1');" value="<?php echo $eefcDetail->amount ?? '0';?>"
+                                                    onfocus="this.select();" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" >
+                                                <span class="text-danger" id="eefc_amount_usd_err"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                </div>
+
+                                
+
+                               
+                             
+                              
+                                
+
+
+                                <div id="curr_acc_chk_box" style="display:none;">
+                                    <div class="row mt-2">
+                                         <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label class="m-checkbox m-checkbox--bold m-checkbox--state-info">
+                                                    <input type="checkbox" id="current_acc_chk_box_id" <?php echo $voucher_details->tocurrent_amount_usd>0 ? 'checked' : '';?> class="submenu_checkbox" value="0" onclick="current_acc_chk();">To Current A/c
+                                                <span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="buyer_current_acc" style="display:none;">
+                                    <div class="row mt-4">
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount(In USD)</label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount(In USD)" name="current_amt_usd" id="current_amt_usd" maxlength="60" autocomplete="off" onkeyup="getAmountInINR(0);" onfocus="this.select();" value="<?php echo $voucher_details->tocurrent_amount_usd;?>">
+                                               <span class="text-danger" id="current_amt_usd_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Rate Per USD</label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Rate Per USD" name="current_rate_usd" id="current_rate_usd" maxlength="60" autocomplete="off" onkeyup="getAmountInINR(0);" value="<?php echo $voucher_details->tocurrent_conv_rate ?? 0;?>" onfocus="this.select();">
+                                               <span class="text-danger" id="current_rate_usd_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount(In INR)<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount(In INR)" name="current_amt_inr" id="current_amt_inr" maxlength="60" autocomplete="off" value="<?php echo $voucher_details->tocurrent_amount_inr;?>">
+                                               <span class="text-danger" id="current_amt_inr"></span>
+                                            </div>
+                                        </div>
+										<div class="col-lg-3">
+                                        <!-- id="buyer_inwrd_chk_box" style="display: none;"> -->
+                                        <div class="form-group m-form__group">
+                                            <label class="m-checkbox m-checkbox--bold m-checkbox--state-info"
+                                                style="margin-top:2.5rem !important;">
+                                                <input type="checkbox" id="inward_check_list" class="submenu_checkbox"
+                                                    data-toggle="modal" data-target="#inward_remittance_popup" value="0"
+                                                    onclick="inward_chk_lst();">Inward Remittance Check List
+                                                <span></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                        <!-- <div class="col-lg-3">
+                                         id="buyer_inwrd_chk_box" style="display: none;">
+                                            <div class="form-group m-form__group">
+                                                <label class="m-checkbox m-checkbox--bold m-checkbox--state-info"style="margin-top:2.5rem !important;">
+                                                    <input type="checkbox" id="inward_check_list" class="submenu_checkbox" value="0" onclick="inward_chk_lst();">Inward Remittance Check List
+                                                <span></span>
+                                                </label>
+                                            </div>
+                                        </div> -->
+                                    </div>
+                                </div>
+                                <div  id="vendor_box" style="display: none;">
+                                    <div class="row mt-2">
+                                        <!-- <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label>Vendor Category<span class="text-danger">*</span></label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="" id="">
+                                                   <option value="">Choose Category</option>
+                                                   <option value="1">Design Vendor</option>
+                                                   <option value="2">Inspection Agency</option>
+                                                   <option value="3">Product Vendor</option>
+                                                </select>
+                                                <span class="text-danger" id=""></span>
+                                            </div>
+                                        </div> -->
+                                        <!-- <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label>Department<span class="text-danger">*</span></label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="department_id" id="department_id" onchange="get_vendor_type_by_dept();">
+                                                   <option value="">Choose Department</option>
+                                                   < ?php foreach ($department_list as $deptlist) {
+                                                          ?>
+                                                          <option value="< ?php echo $deptlist['department_id']; ?>" < ?php echo $voucher_details->dept_id==$deptlist['department_id'] ? 'selected' : '';?>>< ?php echo $deptlist['department']; ?></option>
+                                                        < ?php }?>
+                                                </select>
+                                                <span class="text-danger" id="department_id_err"></span>
+                                            </div>
+                                        </div> -->
+                                        <!-- <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label>Vendor Type<span class="text-danger">*</span></label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="vendor_type_id"  id="vendor_type_id" onchange="get_vendor_details_by_type();">
+                                                   
+                                                </select>
+                                                <span class="text-danger" id="vendor_type_id_err"></span>
+                                            </div>
+                                        </div> -->
+                                        <div class="col-lg-3">
+                                        <div class="form-group m-form__group">
+                                            <label>Vendor<span class="text-danger">*</span></label>
+                                            <select class="form-control m_selectpicker" data-live-search="true"
+                                                name="vendor_id" id="vendor_id" onchange="get_supplier_po_by_vendor()">
+												<option value="">Choose Vendor</option>
+												<?php
+												$options = array();
+												$current_vendor = '';
+
+												foreach ($vendor_list as $row) {
+													$vendor_type_id = $row['vendor_type_id'];
+													$vendor_type = $row['vendor_type'];
+													$vendor_id = $row['vendor_id'];
+													$vendor_name = $row['vendor_name'];
+
+													// Check if the department has changed
+													if ($current_vendor != $vendor_type) {
+															// Close the previous optgroup if it exists
+															if ($current_vendor != '') {
+																$options[] = '</optgroup>';
+															}
+															// Add a new optgroup for the vendor_type
+															$options[] = '<optgroup label="' . htmlspecialchars($vendor_type) . '">';
+															$current_vendor = $vendor_type;
+													}
+
+													// Add the vendor type option with the vendor_type_id as a data attribute
+													$options[] = '<option value="' . htmlspecialchars($vendor_id) . '" data-vendor-type-id="' . htmlspecialchars($vendor_type_id) . '">' . htmlspecialchars($vendor_name) . '</option>';
+												}
+
+												// Close the last optgroup if it exists
+												if ($current_vendor != '') {
+													$options[] = '</optgroup>';
+												}
+
+												// Output the options
+												echo implode('', $options);
+												?>
+                                            </select>
+                                            <span class="text-danger" id="vendor_id_err"></span>
+                                        </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label>Supplier PO ID</label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="supplier_po_id" id="supplier_po_id" onchange="get_buyer_order_by_sp()">                                                  
+                                                </select>
+                                                <span class="text-danger" id="supplier_po_id_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label>Buyer Order ID</label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="sp_buyer_order_id" id="sp_buyer_order_id">
+                                                  
+                                                </select>
+                                                <span class="text-danger" id="sp_buyer_order_id_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 mt_25px">
+                                            <div class="row">
+                                                <label class="col-lg-5">Committed : </label>
+                                                <p class="col-lg-7">
+                                                    <label class="text-theme" id="total_sp_amount">1,00,000.00</label>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 mt_25px">
+                                            <div class="row">
+                                                <label class="col-lg-5">Paid &emsp;&emsp;&emsp;&nbsp;&nbsp;: </label>
+                                                <p class="col-lg-7">
+                                                    <label class="text-theme" id="sp_paid_amount">50,000.00</label>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 mt_25px">
+                                            <div class="row">
+                                                <label class="col-lg-5">Balance &emsp;&nbsp;&nbsp;&nbsp;: </label>
+                                                <p class="col-lg-7">
+                                                    <label class="text-theme" id="sp_balance_amount">50,000.00</label>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount(In INR)<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount(In INR)" name="vendor_amount" id="vendor_amount" maxlength="60" autocomplete="off" value="<?php echo $voucher_details->voucher_type=='vendor' ? $voucher_details->total_voucher_amount : '';?>">
+                                               <span class="text-danger" id="vendor_amount_err"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="staff_box" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label>Staff Name<span class="text-danger">*</span></label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="staff_id" id="staff_id">
+                                                   <option value="">Choose Staff Name</option>
+                                                   <?php foreach ($staff_list as $stafflist) {
+                                                          ?>
+                                                          <option value="<?php echo $stafflist['staff_id']; ?>" <?php echo $voucher_details->staff_id==$stafflist['staff_id'] ? 'selected' : '';?>><?php echo $stafflist['name']; ?></option>
+                                                        <?php }?>
+                                                </select>
+                                                <span class="text-danger" id="staff_id_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount(In INR)<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount(In INR)" name="staff_amount" id="staff_amount" maxlength="60" autocomplete="off" value="<?php echo $voucher_details->staff_id!='' ? $voucher_details->total_voucher_amount : '';?>">
+                                               <span class="text-danger" id="staff_amount_err"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+								<div id="interest_int_loan_box" style="display:none;">
+									<div class="row">
+										<div class="col-lg-3" id="">
+											<div class="form-group m-form__group">
+												<label>Internal Loan<span class="text-danger">*</span></label>
+												<select class="form-control m-bootstrap-select m_selectpicker"
+													data-live-search="true" name="internal_loan_id" id="internal_loan_id"
+													onchange="internal_loan_details()">
+													<option value="">Choose Internal Loan</option>
+													<?php foreach ($internal_loan_list as $illist) {
+                                                          ?>
+                                                          <option value="<?php echo $illist['internal_loan_id']; ?>" <?php echo $illist['internal_loan_id']==$voucher_details->internal_loan_id ? 'selected' : '';?>><?php echo $illist['internal_loan_no']; ?></option>
+                                                        <?php }?>
+												</select>
+												<span class="text-danger" id="internal_loan_id_err"></span>
+											</div>
+										</div>
+										<div class="col-lg-3">
+											<div class="form-group m-form__group">
+												<label>Amount(In INR)<span class="text-danger">*</span></label>
+												<input type="text" class="form-control m-input m-input--square"
+													placeholder="Enter Amount(In INR)" name="internal_loan_amount"
+													id="internal_loan_amount" maxlength="60" autocomplete="off"  value="<?php echo $voucher_details->internal_loan_id !='' ? $voucher_details->total_voucher_amount_inr : '';?>">
+												<span class="text-danger" id="internal_loan_amount_err"></span>
+											</div>
+										</div>
+										<div class="col-lg-3">
+											<div class="form-group m-form__group">
+													<label class="m-checkbox m-checkbox--bold m-checkbox--state-info"style="margin-top:2.5rem !important;">
+														<input type="checkbox" id="check_interest" name="check_interest" class="submenu_checkbox" value="1" <?php echo $voucher_details->internal_loan_interest == 1 ?"checked":"";?> >This is Interest Amount
+													<span></span>
+													</label>
+											</div>
+										</div>
+									</div>
+								</div>
+                                <div id="interest_box" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label>Type<span class="text-danger">*</span></label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="int_type" id="int_type" onchange="interest_chk();">
+                                                   <option value="" <?php echo $voucher_details->interest_type="" ? 'selected' : "";?>>Choose Type</option>
+                                                   <option value="pcfc" <?php echo $voucher_details->interest_type="pcfc" ? 'selected' : "";?> >PCFC</option>
+                                                   <option value="internal_loan" <?php echo $voucher_details->interest_type="internal_loan" ? 'selected' : "";?>>Internal Loan</option>
+                                                   <option value="FD" <?php echo $voucher_details->interest_type="FD" ? 'selected' : "";?>>Fixed Deposit</option>
+                                                </select>
+                                                <span class="text-danger" id="int_type_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3" id="interest_pcfc_box" style="display: none;">
+                                            <div class="form-group m-form__group">
+                                                <label>PCFC<span class="text-danger">*</span></label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="int_pcfc_id" id="int_pcfc_id" onchange="get_int_pcfc_details()">
+                                                   <option value="">Choose PCFC</option>
+                                                   <?php foreach ($pcfc_list as $pcfclist) {
+                                                          ?>
+                                                          <option value="<?php echo $pcfclist['pcfc_id']; ?>" <?php echo $voucher_details->interest_pcfc_id !='' ? 'selected' : ''; ?>><?php echo $pcfclist['pcfc_no']; ?></option>
+                                                        <?php }?>
+                                                </select>
+                                                <span class="text-danger" id="int_pcfc_id_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3" id="interest_pcfc_amt_box" style="display: none;">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount(In INR)<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount(In INR)" name="int_pcfc_amount" id="int_pcfc_amount" maxlength="60" autocomplete="off" value="<?php echo $voucher_details->interest_pcfc_id !='' ? $voucher_details->total_voucher_amount : '';?>">
+                                               <span class="text-danger" id="int_pcfc_amount_err"></span>
+                                            </div>
+                                        </div>
+                                        <!-- <div class="col-lg-3" id="interest_int_loan_box" style="display: none;">
+                                            <div class="form-group m-form__group">
+                                                <label>Internal Loan<span class="text-danger">*</span></label>
+                                                <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="internal_loan_id" id="internal_loan_id" onchange="internal_loan_details()">
+                                                   <option value="">Choose Internal Loan</option>
+                                                   < ?php foreach ($internal_loan_list as $illist) {
+                                                          ?>
+                                                          <option value="< ?php echo $illist['internal_loan_id']; ?>" < ?php echo $illist['internal_loan_id']==$voucher_details->internal_loan_id ? 'selected' : '';?>><?php echo $illist['internal_loan_no']; ?></option>
+                                                        < ?php }?>
+                                                </select>
+                                                <span class="text-danger" id="internal_loan_id_err"></span>
+                                            </div>
+                                        </div> -->
+                                        <!-- <div class="col-lg-3" id="interest_int_loan_amt_box" style="display: none;">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount(In INR)<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount(In INR)" name="internal_loan_amount" id="internal_loan_amount" maxlength="60" autocomplete="off" value="<?php echo $voucher_details->internal_loan_id !='' ? $voucher_details->total_voucher_amount : '';?>">
+                                               <span class="text-danger" id="internal_loan_amount_err"></span>
+                                            </div>
+                                        </div> -->
+                                    </div>
+                                </div>
+                                <div id="others_current_acc" style="display:none;">
+                                    <h5 class="text-theme">To Current A/c</h5>
+                                    <div class="row mt-4">
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount(In USD)</label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount(In USD)" name="others_amount_usd" id="others_amount_usd" maxlength="60" autocomplete="off" onkeyup="getAmountInINR(0);" value="<?php echo $voucher_details->voucher_type='others' ? $voucher_details->others_amount_usd : '';?>" onfocus="this.select();" >
+                                               <span class="text-danger" id="others_amount_usd_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Rate Per USD</label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Rate Per USD" name="others_amount_rate" id="others_amount_rate" maxlength="60" autocomplete="off" onkeyup="getAmountInINR(0);" value="<?php echo $voucher_details->voucher_type='others' ? $voucher_details->others_amount_rate : '';?>" onfocus="this.select();">
+                                               <span class="text-danger" id="others_amount_rate_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                               <label>Amount(In INR)<span class="text-danger">*</span></label>
+                                               <input type="text" class="form-control m-input m-input--square" placeholder="Enter Amount(In INR)" name="others_amount_inr" id="others_amount_inr" maxlength="60" autocomplete="off" value="<?php echo $voucher_details->voucher_type=='others' ? $voucher_details->others_amount_inr : '0';?>">
+                                               <span class="text-danger" id="others_amount_inr_err"></span>
+                                            </div>
+                                        </div>
+                                        <!-- <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label class="m-checkbox m-checkbox--bold m-checkbox--state-info"style="margin-top:2.5rem !important;">
+                                                    <input type="checkbox" id="inward_check_list" class="submenu_checkbox" value="0" onclick="inward_chk_lst();">Inward Remittance Check List
+                                                <span></span>
+                                                </label>
+                                            </div>
+                                        </div> -->
+                                    </div>
+                                </div>
+                                <div class="row" id="fd_int_box" style="display:none">
+                                    <div class="col-lg-12">
+                                        <div class="col-lg-3 mt-4">
+                                            <div class="form-group m-form__group">
+                                                <div class="m-radio-block">
+                                                    <label class="m-radio d-block m-radio--bold m-radio--success py-1">
+                                                        <input class="py-1" type="radio" <?php echo $voucher_details->fd_int =='To Current Acc' ? 'checked' : ''; ?> name="fd_int" id="fd_int" value="To Current Acc">To Current Acc
+                                                        <span></span>
+                                                    </label>
+                                                    <label class="m-radio d-block m-radio--bold m-radio--success py-1">
+                                                        <input class="py-1" type="radio" <?php echo $voucher_details->fd_int =='To FD Acc' ? 'checked' : ''; ?> name="fd_int"  id="fd_int"  value="To FD Acc">To FD Acc
+                                                        <span></span>
+                                                    </label>
+                                                    <label class="m-radio d-block m-radio--bold m-radio--success py-1">
+                                                        <input class="py-1" type="radio" name="fd_int" <?php echo $voucher_details->fd_int =='TDS Deduct' ? 'checked' : ''; ?> id="fd_int"  value="TDS Deduct">TDS Deduct
+                                                        <span></span>
+                                                    </label>
+                                                </div>
+                                                <span class="text-danger" id="act_pro_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-9">
+                                            <div id="to_current_acc_div" style="display:none;">
+                                                <h5 class="text-theme">To Current A/c</h5>
+                                                <div class="row mt-4">
+                                                    <div class="col-lg-4">
+                                                        <div class="form-group m-form__group">
+                                                            <label>Amount (In INR)<span class="text-danger">*</span></label>
+                                                            <input type="text" id="current_acc_amount" name="current_acc_amount" class="form-control  m-input m-input--square" placeholder="Enter Current account amount" value="<?php echo $voucher_details->fd_current_amount;?>">
+                                                            <span class="text-danger" id="date_err"></span>
+                                                        </div>
+                                                    </div>  
+                                                </div>
+                                            </div>
+                                            <div id="to_fd_acc_div" style="display:none;">
+                                                <h5 class="text-theme">To FD A/c</h5>
+                                                <div class="row mt-4">
+                                                    <div class="col-lg-4">
+                                                        <div class="form-group m-form__group">
+                                                            <label>FD No<span class="text-danger">*</span></label>
+                                                            <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="fd_id" id="fd_id">
+                                                                <option value="">Select FD No</option>
+                                                                        <?php foreach ($fd_list as $fdlist) {
+                                                                        if($fdlist['status']==0){ ?>
+                                                                        <option value="<?php echo $fdlist['fixed_deposit_id']; ?>" <?php echo $voucher_details->fd_id==$fdlist['fixed_deposit_id'] ? 'selected' : '';?>><?php echo $fdlist['fixed_deposit_no']; ?></option>
+                                                                        <?php }}?>
+                                                            </select>
+                                                        
+                                                            <span class="text-danger" id="fd_err"></span>
+                                                        </div>
+                                                    </div>  
+                                                    <div class="col-lg-4 mt-3">
+                                                    <div class="form-group m-form__group pl-5">
+                                                    <label><span class="text-danger"></span></label>
+                                                        <div class="m-radio-inline">
+                                                            <label class="m-radio m-radio--bold m-radio--success">
+                                                                <input type="radio" <?php echo $voucher_details->int_bal =='Interest' ? 'checked' : ''; ?> name="int_bal" id="int_bal" value="Interest">Interest
+                                                                <span></span>
+                                                            </label>
+                                                            <label class="m-radio m-radio--bold m-radio--success">
+                                                                <input type="radio" <?php echo $voucher_details->int_bal =='Balance' ? 'checked' : ''; ?> name="int_bal"  id="int_bal"  value="Balance">Balance
+                                                                <span></span>
+                                                            </label>
+                                                        </div>
+                                                        
+                                                    </div>
+                                                    </div> 
+
+                                                    <div class="col-lg-4">
+                                                        <div class="form-group m-form__group">
+                                                                <label>Amount (In INR)<span class="text-danger">*</span></label>
+                                                                <input type="text" id="fd_acc_amount" name="fd_acc_amount" class="form-control  m-input m-input--square" placeholder="Enter Amount" value="<?php echo $voucher_details->fd_acc_amount;?>">
+                                                                <span class="text-danger" id="fd_err"></span>
+                                                        </div>
+                                                    </div> 
+                                                </div>
+                                            </div>
+                                            <div id="to_tds_acc_div" style="display:none;">
+                                            <h5 class="text-theme">TDS Deduct</h5>
+                                            <div class="row mt-4">
+                                                <div class="col-lg-4">
+                                                    <div class="form-group m-form__group" id="tds_deduct_div" >
+                                                    <label>TDS Percentage<span class="text-danger">*</span></label>
+                                                        <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="tds_deduct" id="tds_deduct">
+                                                        
+                                                        </select>
+                                                        <span class="text-danger" id="tds_deduct_err"></span>
+                                                    </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row"  id="common_div">
+                                    <div class="col-lg-3">
+                                        <div class="form-group m-form__group" style="margin-bottom: 0px !important;">
+                                            <label class="m-checkbox m-checkbox--bold m-checkbox--state-info">
+                                               <input type="checkbox" <?php echo $voucher_details->gst_percentage >0 ? 'checked' : '';?> name="gst_included" id="gst_included" onclick="gst_chk();">GST Included
+                                               <span></span>
+                                            </label>
+                                        </div>
+                                        <div class="form-group m-form__group" id="percen_dn_box" style="display:none;">
+                                            <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="gst_perc" id="gst_perc">
+                                              
+                                            </select>
+                                            <span class="text-danger" id="gst_perc_err"></span>
+                                        </div>
+                                    </div>
+                                    <!-- <div class="col-lg-3" id="percen_dn_box" style="display:none;">
+                                        <div class="form-group m-form__group">
+                                            <label>Percentage(%)<span class="text-danger">*</span></label>
+                                            <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="" id="">
+                                               <option value="">Choose Percentage</option>
+                                               <option value="1">5%</option>
+                                               <option value="2">12%</option>
+                                               <option value="3">18%</option>
+                                               <option value="3">28%</option>
+                                            </select>
+                                            <span class="text-danger" id=""></span>
+                                        </div>
+                                    </div> -->
+                                    <div class="col-lg-3">
+                                        <div class="form-group m-form__group" style="margin-bottom: 0px !important;">
+                                            <label class="m-checkbox m-checkbox--bold m-checkbox--state-info">
+                                               <input type="checkbox" name="tds_included" id="tds_included" <?php echo $voucher_details->gst_percentage >0 ? 'checked' : '';?> onclick="tds_chk();">TDS Included
+                                               <span></span>
+                                            </label>
+                                        </div>
+                                        <div class="form-group m-form__group" id="tds_percen_dn_box" style="display:none;">
+                                            <select class="form-control m-bootstrap-select m_selectpicker" data-live-search="true" name="tds_perc" id="tds_perc">
+                                             
+                                            </select>
+                                            <span class="text-danger" id="tds_perc_err"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6" id="cheque_details" style="display:none">
+                                        <div class="col-lg-6">
+                                            <div class="form-group m-form__group">
+                                            <label>Cheque No</label>
+                                            <input type="text" class="form-control m-input m-input--square" placeholder="Enter cheque No" name="cheque_no" id="cheque_no" maxlength="60" autocomplete="off" value="<?php echo $voucher_details->cheque_no;?>">
+                                            <span class="text-danger" id="cheque_no_err"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6">
+                                            <div class="form-group m-form__group">
+                                                <label>Cheque Date</label>
+                                                <input type="text" class="form-control  m-input m-input--square m_datepicker_1" placeholder="Enter Cheque Date" id="cheque_date" name="cheque_date" value="<?php echo $voucher_details->cheque_date == '0000-00-00' ? date($date_format, strtotime($voucher_details->voucher_date)) : date($date_format, strtotime($voucher_details->cheque_date));?>" >
+                                                <span class="text-danger" id="cheque_date_err"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- <div class="col-lg-3">
+                                        <div class="form-group m-form__group">
+                                            <label>Description</label>
+                                            <textarea class="form-control" placeholder="Enter Description" name="description" id="description"></textarea>
+                                            <span class="text-danger" id="description_err"></span>
+                                      </div>
+                                    </div> -->
+                                </div>
+                                <div class="row">
+                                    <div class="col-lg-3">
+                                            <div class="form-group m-form__group">
+                                                <label>Remarks</label>
+                                                <textarea class="form-control" placeholder="Enter Description" name="description" id="description"><?php echo $voucher_details->description; ?></textarea>
+                                                <span class="text-danger" id="description_err"></span>
+                                        </div>
+                                    </div>
+									<div class="col-lg-3">
+                                    <div class="form-group m-form__group">
+                                        <label>Particulars</label>
+                                        <textarea class="form-control" placeholder="Enter Particulars" name="particulars_desc"
+                                            id="particulars_desc"><?php echo $voucher_details->particulars ?? ""; ?></textarea>
+                                        <span class="text-danger" id="particulars_desc_err"></span>
+                                    </div>
+                                </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-lg-3">
+                                        <div class="form-group m-form__group">
+                                            <label class="m-checkbox m-checkbox--bold m-checkbox--state-info mt_25px">
+                                               <input type="checkbox" name="verify_chk_box" id="verify_chk_box" onclick="verify_chk();">I Have Checked All the Above Details
+                                               <span></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end align-items-center">
+                                    <button type="submit" id="btnsubmit" class="btn btn-primary" style="display:none;">Update</button>
+                                </div>
+                                <!-- <div class="d-flex justify-content-end align-items-center">
+                                    <button type="submit" id="btnsubmit" class="btn btn-primary" style="display:none;" onclick="verify_screen();">Create</button>
+                                </div> -->
+                            </div>
+                        </div>
+                     </div>
+                  </div>
+                  <!--End::Section-->
+               </div>
+            </div>
+         </div>
+         <!-- end:: Body -->
+         <!--begin::View Product-->
+         <div class="container">
+            <div class="modal fade" id="verify_popup" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+               
+            </div>
+         </div>
+         <!--end::View Product-->
+
+         <!-- begin::Footer -->
+         <?php $this->load->view('common_footer'); ?>
+         <!-- end::Footer -->
+      </div>
+      <!-- end:: Page -->
+      <!-- <script>
+          function verify_screen()
+         {
+            var baseurl = '<?php //echo base_url(); ?>';
+         $.ajax({
+         type: "POST",
+         url: baseurl+'Voucher/voucher_confirm',
+         type: "POST",
+         success: function(response)
+         {
+         $('#verify_popup').empty().append(response);
+         $('#verify_popup').modal('show');
+         }
+         });
+         }
+      </script> -->
+      <script>
+        
+        type_dropdown_box()
+          function type_dropdown_box()
+          {
+            var type_dn_box = document.getElementById("type_dn_box").value;
+
+            var buyer_box = document.getElementById("buyer_box");
+
+            // Forward Contract checkbox start
+            var forw_chk = document.getElementById("forw_chk");
+            var forward_contract_list = document.getElementById("forward_contract_list");
+            var forward_contract_box = document.getElementById("forward_contract_box");
+            // Forward Contract checkbox end
+
+            // PCFC checkbox start
+            var pcfc_chk_box = document.getElementById("pcfc_chk_box");
+            var pcfc_list = document.getElementById("pcfc_list");
+            var pcfc_box = document.getElementById("pcfc_box");
+            // PCFC checkbox end
+
+            // eefc checkbox start
+            var eefc_chk_box = document.getElementById("eefc_chk_box");
+            var eefc_list = document.getElementById("eefc_list");
+            var eefc_box = document.getElementById("eefc_box");
+
+            // Current Account checkbox start
+            var curr_acc_chk_box = document.getElementById("curr_acc_chk_box");
+            var current_acc_chk_box_id = document.getElementById("current_acc_chk_box_id");
+            var buyer_current_acc = document.getElementById("buyer_current_acc");
+            // Current Account checkbox end
+
+            var vendor_box = document.getElementById("vendor_box");
+            var staff_box = document.getElementById("staff_box");
+            var interest_box = document.getElementById("interest_box");
+
+            // Interest dropdown start
+            var int_type = document.getElementById("int_type").value;
+            var interest_pcfc_box = document.getElementById("interest_pcfc_box");
+            var interest_pcfc_amt_box = document.getElementById("interest_pcfc_amt_box");
+            var interest_int_loan_box = document.getElementById("interest_int_loan_box");
+            var interest_int_loan_amt_box = document.getElementById("interest_int_loan_amt_box");
+            // Interest dropdown end
+
+            var others_current_acc = document.getElementById("others_current_acc");
+
+            var common_div = document.getElementById("common_div");
+            var fd_int_box = document.getElementById("fd_int_box");
+
+            if (type_dn_box == "buyer") 
+            {
+                buyer_box.style.display="block";
+                forw_chk.style.display="block";
+                pcfc_chk_box.style.display="block";
+                eefc_chk_box.style.display="block";
+                curr_acc_chk_box.style.display="block";
+                fd_int_box.style.display="none";
+                // Forward Contract checkbox start
+                if (forward_contract_list.checked) 
+                {
+                    forward_contract_box.style.display="block";
+                }
+                else
+                {
+                    forward_contract_box.style.display="none";
+                }
+                // Forward Contract checkbox end
+
+                // PCFC checkbox start
+                if (pcfc_list.checked) 
+                {
+                    pcfc_box.style.display="block";
+                }
+                else
+                {
+                    pcfc_box.style.display="none";
+                }
+                // PCFC checkbox end
+
+                 if (eefc_list.checked) 
+                {
+                    eefc_box.style.display="block";
+                }
+                else
+                {
+                    eefc_box.style.display="none";
+                }
+
+                // Current Account checkbox start
+                if (current_acc_chk_box_id.checked) 
+                {
+                    buyer_current_acc.style.display="block";
+                }
+                else
+                {
+                    buyer_current_acc.style.display="none";
+                }
+                // Current Account checkbox End
+
+                vendor_box.style.display="none";
+                staff_box.style.display="none";
+                interest_box.style.display="none";
+
+                interest_pcfc_box.style.display="none";
+                interest_pcfc_amt_box.style.display="none";
+                // interest_int_loan_box.style.display="none";
+                // interest_int_loan_amt_box.style.display="none";
+                others_current_acc.style.display="none";
+                fd_int_box.style.display="none";
+            }
+            else if (type_dn_box == "vendor") 
+            {
+                vendor_box.style.display="block";
+                staff_box.style.display="none";
+
+                buyer_box.style.display="none";
+                forw_chk.style.display="none";
+                pcfc_chk_box.style.display="none";
+                eefc_chk_box.style.display="none";
+                curr_acc_chk_box.style.display="none";
+                forward_contract_box.style.display="none";
+                pcfc_box.style.display="none";
+                buyer_current_acc.style.display="none";
+                interest_box.style.display="none";
+
+                interest_pcfc_box.style.display="none";
+                interest_pcfc_amt_box.style.display="none";
+                interest_int_loan_box.style.display="none";
+                interest_int_loan_amt_box.style.display="none";
+                others_current_acc.style.display="none";
+                fd_int_box.style.display="none";
+            }
+            else if (type_dn_box == "staff") 
+            {
+                staff_box.style.display="block";
+                vendor_box.style.display="none";
+
+                buyer_box.style.display="none";
+                forw_chk.style.display="none";
+                pcfc_chk_box.style.display="none";
+                eefc_chk_box.style.display="none";
+                curr_acc_chk_box.style.display="none";
+                forward_contract_box.style.display="none";
+                pcfc_box.style.display="none";
+                buyer_current_acc.style.display="none";
+                interest_box.style.display="none";
+
+                interest_pcfc_box.style.display="none";
+                interest_pcfc_amt_box.style.display="none";
+                interest_int_loan_box.style.display="none";
+                interest_int_loan_amt_box.style.display="none";
+                others_current_acc.style.display="none";
+                fd_int_box.style.display="none";
+            }
+			else if (type_dn_box == 'internal loan') {
+				buyer_box.style.display = "none";
+				forw_chk.style.display = "none";
+				pcfc_chk_box.style.display = "none";
+				eefc_chk_box.style.display = "none";
+				curr_acc_chk_box.style.display = "none";
+				forward_contract_box.style.display = "none";
+				pcfc_box.style.display = "none";
+				// eefc_chk_box.style.display = "none";
+				//eefc_box.style.display = "none";
+				buyer_current_acc.style.display = "none";
+				vendor_box.style.display = "none";
+				staff_box.style.display = "none";
+				interest_box.style.display = "none";
+				interest_pcfc_box.style.display = "none";
+				interest_pcfc_amt_box.style.display = "none";
+
+				fd_int_box.style.display = "none";
+				// deposit_lab.style.display = "none";
+				interest_int_loan_box.style.display = "block";
+				// interest_int_loan_amt_box.style.display = "block";
+				// alert(interest_int_loan_box.style.display);
+			}
+            else if (type_dn_box == "interest") 
+            {
+                interest_box.style.display="block";
+                
+                if (int_type == "pcfc") 
+                {
+                    interest_pcfc_box.style.display="block";
+                    interest_pcfc_amt_box.style.display="block";
+                    interest_int_loan_box.style.display="none";
+                    interest_int_loan_amt_box.style.display="none";
+                }
+                else if (int_type == "internal_loan") 
+                {
+                    interest_pcfc_box.style.display="none";
+                    interest_pcfc_amt_box.style.display="none";
+                    interest_int_loan_box.style.display="block";
+                    interest_int_loan_amt_box.style.display="block";
+                }
+                else if (int_type == "others") 
+                {
+                    interest_pcfc_box.style.display="none";
+                    interest_pcfc_amt_box.style.display="none";
+                    interest_int_loan_box.style.display="none";
+                    interest_int_loan_amt_box.style.display="none";
+                }
+                else
+                {
+                    interest_pcfc_box.style.display="none";
+                    interest_pcfc_amt_box.style.display="none";
+                    interest_int_loan_box.style.display="none";
+                    interest_int_loan_amt_box.style.display="none";
+                }
+
+                buyer_box.style.display="none";
+                forw_chk.style.display="none";
+                pcfc_chk_box.style.display="none";
+                eefc_chk_box.style.display="none";
+                curr_acc_chk_box.style.display="none";
+                forward_contract_box.style.display="none";
+                pcfc_box.style.display="none";
+                buyer_current_acc.style.display="none";
+                vendor_box.style.display="none";
+                staff_box.style.display="none";
+                others_current_acc.style.display="none";
+                fd_int_box.style.display="none";
+            }
+            else if (type_dn_box == "others") 
+            {
+                others_current_acc.style.display="block";
+                buyer_box.style.display="none";
+                forw_chk.style.display="none";
+                pcfc_chk_box.style.display="none";
+                eefc_chk_box.style.display="none";
+                curr_acc_chk_box.style.display="none";
+                forward_contract_box.style.display="none";
+                pcfc_box.style.display="none";
+                buyer_current_acc.style.display="none";
+                vendor_box.style.display="none";
+                staff_box.style.display="none";
+                interest_box.style.display="none";
+                interest_pcfc_box.style.display="none";
+                interest_pcfc_amt_box.style.display="none";
+                interest_int_loan_box.style.display="none";
+                interest_int_loan_amt_box.style.display="none";
+                fd_int_box.style.display="none";
+            }
+            else if (type_dn_box == "FD Interest") 
+            {
+                staff_box.style.display="none";
+                vendor_box.style.display="none";
+
+                buyer_box.style.display="none";
+                forw_chk.style.display="none";
+                pcfc_chk_box.style.display="none";
+                eefc_chk_box.style.display="none";
+                curr_acc_chk_box.style.display="none";
+                forward_contract_box.style.display="none";
+                pcfc_box.style.display="none";
+                buyer_current_acc.style.display="none";
+                interest_box.style.display="none";
+
+                interest_pcfc_box.style.display="none";
+                interest_pcfc_amt_box.style.display="none";
+                interest_int_loan_box.style.display="none";
+                interest_int_loan_amt_box.style.display="none";
+                others_current_acc.style.display="none";
+              
+
+                fd_int_box.style.display="block"; 
+                common_div.style.display="none";               
+                
+            }
+            else
+            {
+                buyer_box.style.display="none";
+                forw_chk.style.display="none";
+                pcfc_chk_box.style.display="none";
+                eefc_chk_box.style.display="none";
+                curr_acc_chk_box.style.display="none";
+                forward_contract_box.style.display="none";
+                pcfc_box.style.display="none";
+                buyer_current_acc.style.display="none";
+                vendor_box.style.display="none";
+                staff_box.style.display="none";
+                interest_box.style.display="none";
+                interest_pcfc_box.style.display="none";
+                interest_pcfc_amt_box.style.display="none";
+                interest_int_loan_box.style.display="none";
+                interest_int_loan_amt_box.style.display="none";
+                fd_int_box.style.display="none";
+            }
+
+          }
+
+		  
+          
+      </script>
+      <script>
+        // inward_chk_lst()
+        //  function inward_chk_lst()
+        //  {
+        //     var inward_check_list = document.getElementById("inward_check_list");
+        //     // var send_via_lab = document.getElementById('send_via_lab');
+
+        //     if (inward_check_list.checked) 
+        //     {
+        //        // alert("1");
+        //        mywin=window.open('< ?php echo base_url(); ?>VoucherAccounts/voucher_inward_chk','mywin','height=800px,width=1000px;');
+        //        // window.open('< ?php //echo base_url(); ?>Receipts/receipts_add','height=500px,width=1000px;');
+        //     }
+        //     // else
+        //     // {
+        //     //    alert("2");
+        //     // }
+        //  }
+
+		function inward_chk_lst() {
+			var baseurl = '<?php echo base_url(); ?>';
+			var inward_check_list = document.getElementById("inward_check_list");
+			// var send_via_lab = document.getElementById('send_via_lab');
+
+			if (inward_check_list.checked) {
+				company_id = document.getElementById('company_id').value;
+				date = document.getElementById('date').value;
+				buyer_order_id = document.getElementById('buyer_order_id').value;
+				currency_id = document.getElementById('currency_id').value;
+
+				pcfcblock = document.getElementById('pcfc_details_append_block_count').value;
+
+
+				fcblock = document.getElementById('fc_details_append_block_count').value;
+				fcrate = 0;
+				for (i = 1; i <= fcblock; i++) {
+					fcrate += document.getElementById('fc_rate_' + i).value;
+				}
+				finalfcrate = fcrate / fcblock;
+
+				var data = {
+					company_id: company_id,
+					date: date,
+					buyer_order_id: buyer_order_id,
+					currency_id: currency_id,
+					pcfcblock: pcfcblock,
+					fcblock: fcblock,
+					finalfcrate: finalfcrate
+				};
+
+				$.ajax({
+					type: "POST",
+					url: baseurl + 'VoucherAccounts/voucher_inward_chk',
+					data: data,
+					success: function(response) {
+						// alert(response.company_id);
+						$('#inward_remittance_popup').empty().append(response);
+
+						$('#inward_remittance_popup').addClass('show');
+						$("#inward_remittance_popup").css("display", "block");
+					}
+				});
+			}
+		}
+      </script>
+      <script>
+        verify_chk()
+         function verify_chk()
+         {
+            var verify_chk_box = document.getElementById("verify_chk_box");
+            var btnsubmit = document.getElementById('btnsubmit');
+
+            if (verify_chk_box.checked) 
+            {
+               btnsubmit.style.display="block";
+            }
+            else
+            {
+                btnsubmit.style.display="none";
+            }
+         }
+      </script>
+      <script>
+      $("#vendor_outst_indi_view").DataTable({
+         //"sorting":false,
+         // "paging": false,
+          "aaSorting":[],
+         //"responsive": true,
+          "language": {
+           "lengthMenu": "Show _MENU_",
+          },
+          "dom":
+           "<'row'" +
+           // "<'col-sm-6 d-flex align-items-center justify-conten-start'l>" +
+           // "<'col-sm-6 d-flex align-items-center justify-content-end'f>" +
+           ">" +
+
+           "<'table-responsive'tr>" +
+
+           "<'row'" +
+           // "<'col-sm-12 col-md-5 d-flex align-items-center justify-content-center justify-content-md-start'i>" +
+           // "<'col-sm-12 col-md-7 d-flex align-items-center justify-content-center justify-content-md-end'p>" +
+           ">"
+         });
+      // $('#add_jst_tag_table').wrap('<div class="dataTables_scroll" />');
+   </script>
+   <script>
+    gst_chk()
+	function gst_chk() {
+	
+    var gst_included = document.getElementById("gst_included");
+    var percen_dn_box = document.getElementById('percen_dn_box');
+
+    if (gst_included.checked) {
+        percen_dn_box.style.display = "block";
+    } else {
+        percen_dn_box.style.display = "none";
+    }
+}
+tds_chk()
+function tds_chk() {
+    var tds_included = document.getElementById("tds_included");
+    var tds_percen_dn_box = document.getElementById('tds_percen_dn_box');
+
+    if (tds_included.checked) {
+        tds_percen_dn_box.style.display = "block";
+    } else {
+        tds_percen_dn_box.style.display = "none";
+    }
+}
+
+showhide_cheque()
+
+    function showhide_cheque() {
+        var payment_mode = document.getElementById("payment_mode").value;
+        var cheque_details = document.getElementById('cheque_details');
+        // var cheque_date = document.getElementById('cheque_date');
+
+        // alert(payment_mode);
+        if (payment_mode == 'Cheque') {
+            cheque_details.style.display = "block";
+            // cheque_date.style.display="block";
+        } else {
+            cheque_details.style.display = "none";
+            // cheque_date.style.display="none";
+        }
+    };
+   </script>
+      <script type="text/javascript">
+         
+          var title = $('title').text() + ' | ' + 'Update Voucher';
+          $(document).attr("title", title);
+
+         // $('.m_table_2').dataTable();
+         var baseurl = '<?php echo base_url(); ?>';
+      </script>
+      <script>
+            $(document).ready(function() {
+
+              
+
+
+                    $("input[name='fd_int']").change(function() {
+                    
+                        var selectedValue = $("input[name='fd_int']:checked").val();
+
+                        // alert(selectedValue);
+                        if(selectedValue =='To Current Acc'){
+
+                        $("#to_current_acc_div").show();
+                        $("#to_fd_acc_div").hide();
+                        $("#to_tds_acc_div").hide();
+                        $("#common_div").hide();
+                        
+                        
+                        }
+                        else if(selectedValue =='To FD Acc'){
+
+                            $("#to_current_acc_div").hide();
+                        $("#to_fd_acc_div").show();
+                        $("#to_tds_acc_div").hide();
+                        $("#common_div").hide();
+                        }
+                        else if(selectedValue =='TDS Deduct'){
+                            $("#to_current_acc_div").hide();
+                        $("#to_fd_acc_div").hide();
+                        $("#to_tds_acc_div").show();
+                        $("#common_div").hide();
+                        }
+                        else{
+                            $("#to_current_acc_div").hide();
+                        $("#to_fd_acc_div").hide();
+                        $("#to_tds_acc_div").hide();
+                        $("#common_div").show();
+                        }
+                    });
+
+                    var voucher_gst_perc =<?php echo $voucher_details->gst_percentage ? $voucher_details->gst_percentage :'0'; ?>;
+                    var voucher_tds_perc =<?php echo $voucher_details->tds_percentage ? $voucher_details->tds_percentage :'0'; ?>;
+                    $.ajax({
+                        type: "GET",
+                        url: baseurl + 'VoucherAccounts/get_gst',
+                        async: false,
+                        dataType: "html",
+                        success: function(response) {
+                            // console.log(response);
+                            $('#gst_perc').empty().append(response);
+                            $('.m_selectpicker').selectpicker('refresh');
+                            if (voucher_gst_perc !== '0') {
+                                $('#gst_perc').val(voucher_gst_perc).change(); 
+                            }
+                        
+                        }
+                    });
+
+                    $.ajax({
+                        type: "GET",
+                        url: baseurl + 'VoucherAccounts/get_tds',
+                        async: false,
+                        dataType: "html",
+                        success: function(response) {
+                            // console.log(response);
+                            $('#tds_perc').empty().append(response);
+                            $('.m_selectpicker').selectpicker('refresh');
+                            if (voucher_tds_perc !== '0') {
+                                $('#tds_perc').val(voucher_tds_perc).change(); 
+                            }
+                        
+                        }
+                    });
+            });
+fd_int_change()
+function fd_int_change(){
+
+    const fd_int = '<?php echo $voucher_details->fd_int;?>';
+
+    // alert(fd_int);
+const to_current_acc_div = document.getElementById('to_current_acc_div');
+const to_fd_acc_div = document.getElementById('to_fd_acc_div');
+const to_tds_acc_div = document.getElementById('to_tds_acc_div');
+const common_div = document.getElementById('common_div');
+
+if (fd_int == 'To Current Acc') {
+    to_current_acc_div.style.display = 'block';
+    to_fd_acc_div.style.display = 'none';
+    to_tds_acc_div.style.display = 'none';
+    common_div.style.display = 'none';
+}
+
+if (fd_int == 'To FD Acc') {
+    to_current_acc_div.style.display = 'none';
+    to_fd_acc_div.style.display = 'block';
+    to_tds_acc_div.style.display = 'none';
+    common_div.style.display = 'none';
+}
+if (fd_int == 'TDS Deduct') {
+    to_current_acc_div.style.display = 'none';
+    to_fd_acc_div.style.display = 'none';
+    to_tds_acc_div.style.display = 'block';
+    common_div.style.display = 'none';
+}
+}
+        </script>
+      <script>
+        get_bank_details_from_comp()
+         function get_bank_details_from_comp(){
+        var company_id=$('#company_id').val();
+        var eefc_bank_id_hidden=$('#eefc_bank_id_hidden').val();
+    $.ajax({
+            type: "POST",
+            url: baseurl+'VoucherAccounts/get_bank_details_from_comp_edit',
+            async: false,
+            data:"company_id="+company_id+"&bank_details_id="+<?php echo $voucher_details->bank_details_id; ?>,
+            dataType: "html",
+            success: function(response)
+            {
+              
+              $('#bank_details_id').empty().append(response);
+              $('.m_selectpicker').selectpicker('refresh');
+           // window.location.href = baseurl+'Ledger_heads';
+            }
+        });
+
+         $.ajax({
+            type: "POST",
+            url: baseurl+'VoucherAccounts/get_bank_details_from_comp_eefc',
+            async: false,
+            data:"company_id="+company_id+"&bank_details_id="+<?php echo $eefcDetail->bank_id ?? 0; ?>,
+            dataType: "html",
+            success: function(response)
+            {
+              
+            $('#eefc_bank_details_id').empty().append(response);
+              $('#eefc_bank_details_id').val(eefc_bank_id_hidden);
+              $('.m_selectpicker').selectpicker('refresh');
+            }
+        });
+
+        $.ajax({
+            type: "POST",
+            url: baseurl+'VoucherAccounts/get_ledger_details_from_comp_edit',
+            async: false,
+            data:"company_id="+company_id+"&ledger_head_id="+<?php echo $voucher_details->ledger_head_id; ?>,
+            dataType: "html",
+            success: function(response)
+            {
+              
+                // console.log(response);
+              $('#ledger_head_id').empty().append(response);
+              $('.m_selectpicker').selectpicker('refresh');
+           // window.location.href = baseurl+'Ledger_heads';
+            }
+        });
+  }
+
+  var buyer_id_edit = '<?php echo $voucher_details->buyer_id ?? '0';?>';
+        var buyer_comp =$('#company_id').val();
+    $.ajax({
+        type: "POST",
+        url: baseurl + 'VoucherAccounts/get_buyer_details_by_comp_id',
+        async: false,
+        data: "company_id=" + buyer_comp,
+        dataType: "html",
+        success: function(response) {
+
+         
+            $('#buyer_order_id').empty().append(response);
+            $('.m_selectpicker').selectpicker('refresh');
+            if (buyer_id_edit !== '0') {
+                $('#buyer_order_id').val(buyer_id_edit).change(); 
+            }
+
+           
+        }
+    });
+
+    get_delivery_invoice_details() 
+    function get_delivery_invoice_details() {
+        var delivery_invoice_id = '<?php echo $voucher_details->delivery_invoice_id ?? '0';?>';
+
+        var buyer_order_id = $('#buyer_order_id').val();
+        $.ajax({
+            type: "POST",
+            url: baseurl + 'VoucherAccounts/get_delivery_invoice_details',
+            async: false,
+            data: "buyer_order_id=" + buyer_order_id,
+            dataType: "html",
+            success: function(response) {
+                // alert(response);
+                $('#di_block').css('display', 'block');
+                $('#delivery_invoice_id').empty().append(response);
+                $('.m_selectpicker').selectpicker('refresh');
+                if (delivery_invoice_id !== '0') {
+                    $('#delivery_invoice_id').val(delivery_invoice_id).change(); 
+                }
+            }
+        });
+    }
+
+
+  get_invoice_details()
+  function get_invoice_details(){
+    var buyer_order_id=$('#buyer_order_id').val();
+    $.ajax({
+            type: "POST",
+            url: baseurl+'VoucherAccounts/get_invoice_details',
+            async: false,
+            data:"buyer_order_id="+buyer_order_id,
+            dataType: "json",
+            success: function(response)
+            {
+                // alert(response.length);
+              $('#invoice_no').val(response.length > 0 ? response[0].invoice_no : " ");
+              $('#invoice_id').val(response.length > 0 ? response[0].invoice_id : " ");
+              $('#balance_amount').val(response.length > 0 ? response[0].balance_amount : 0);
+            //   $('.m_selectpicker').selectpicker('refresh');
+           // window.location.href = baseurl+'Ledger_heads';
+            }
+        });
+  }
+  get_fc_details()
+  function get_fc_details(){
+    var fc_id=$('#fc_id').val();
+    $.ajax({
+            type: "POST",
+            url: baseurl+'VoucherAccounts/get_fc_details',
+            async: false,
+            data:"fc_id="+fc_id,
+            dataType: "json",
+            success: function(response)
+            {
+              $('#fc_rate_lbl').html(response.rate_per_usd);
+              $('#fc_rate').val(response.rate_per_usd);
+              $('#fc_balance').html(response.balance_amount > 0 ? response.balance_amount : 0);
+             
+            
+            //   $('.m_selectpicker').selectpicker('refresh');
+           // window.location.href = baseurl+'Ledger_heads';
+            }
+        });
+  }
+//   get_pcfc_details()
+//   function get_pcfc_details(){
+//     var pcfc_id=$('#pcfc_id').val();
+//     $.ajax({
+//             type: "POST",
+//             url: baseurl+'VoucherAccounts/get_pcfc_details',
+//             async: false,
+//             data:"pcfc_id="+pcfc_id,
+//             dataType: "json",
+//             success: function(response)
+//             {
+//                 // alert(response.length);
+//                 $('#pcfc_balance').html(response[0].balance_amount > 0 ? response[0].balance_amount : " ");
+//             //   $('.m_selectpicker').selectpicker('refresh');
+//            // window.location.href = baseurl+'Ledger_heads';
+//             }
+//         });
+//   }
+
+ get_pcfc_details()
+function get_pcfc_details() {
+    var pcfc_id=$('#pcfc_id').val();
+    $.ajax({
+        type: "POST",
+        url: baseurl + 'VoucherAccounts/get_pcfc_details',
+        async: false,
+        data: "pcfc_id=" + pcfc_id,
+        dataType: "json",
+        success: function(response) {
+            $('#final_pcfc_id' + id).val(pcfc_id);
+            $('#pcfccurrency_symbol' + id).html(response.currency_code);
+            $('#pcfccurrency_lbl_symbol' + id).html(response.currency_code);
+            $('#pcfccurrency_amt_symbol' + id).html(response.currency_code);
+            $('#pcfccurrency_rt_symbol' + id).html(response.currency_code);
+
+            $('#pcfc_rate_lbl' + id).html(response.rate_per_usd);
+            $('#pcfc_rate' + id).val(response.rate_per_usd);
+            $('#pcfc_balance' + id).html(response.balance_amount > 0 ? response.balance_amount : "")
+                .toFixed(2);
+
+        }
+    });
+}
+
+  get_vendor_type_by_dept()
+  function get_vendor_type_by_dept(){
+    var department_id=$('#department_id').val();
+    $.ajax({
+            type: "POST",
+            url: baseurl+'VoucherAccounts/get_vendor_type_by_dept',
+            async: false,
+            data:"department_id="+department_id,
+            dataType: "html",
+            success: function(response)
+            {
+                // console.log(response);
+                $('#vendor_type_id').empty().append(response);
+              $('.m_selectpicker').selectpicker('refresh');
+                
+            //   $('.m_selectpicker').selectpicker('refresh');
+           // window.location.href = baseurl+'Ledger_heads';
+            }
+        });
+  }
+  get_vendor_details_by_type()
+  function get_vendor_details_by_type(){
+    var vendor_type_id=$('#vendor_type_id').val();
+    $.ajax({
+            type: "POST",
+            url: baseurl+'VoucherAccounts/get_vendor_details_by_type',
+            async: false,
+            data:"vendor_type_id="+vendor_type_id,
+            dataType: "html",
+            success: function(response)
+            {
+                $('#vendor_id').empty().append(response);
+              $('.m_selectpicker').selectpicker('refresh');
+                
+            //   $('.m_selectpicker').selectpicker('refresh');
+           // window.location.href = baseurl+'Ledger_heads';
+            }
+        });
+  }
+  get_supplier_po_by_vendor()
+  function get_supplier_po_by_vendor(){
+    var vendor_id=$('#vendor_id').val();
+    $.ajax({
+            type: "POST",
+            url: baseurl+'VoucherAccounts/get_supplier_po_by_vendor',
+            async: false,
+            data:"vendor_id="+vendor_id,
+            dataType: "html",
+            success: function(response)
+            {
+                $('#supplier_po_id').empty().append(response);
+              $('.m_selectpicker').selectpicker('refresh');
+                
+            //   $('.m_selectpicker').selectpicker('refresh');
+           // window.location.href = baseurl+'Ledger_heads';
+            }
+        });
+  }
+  get_buyer_order_by_sp()
+  function get_buyer_order_by_sp(){
+    var supplier_po_id=$('#supplier_po_id').val();
+    $.ajax({
+            type: "POST",
+            url: baseurl+'VoucherAccounts/get_buyer_order_by_sp',
+            async: false,
+            data:"supplier_po_id="+supplier_po_id,
+            dataType: "html",
+            success: function(response)
+            {
+                var res=response.split('||');
+
+                $('#sp_buyer_order_id').empty().append(res[0]);
+                $('#total_sp_amount').html(res[1]);
+                $('#sp_paid_amount').html(res[2]);
+                $('#sp_balance_amount').html(res[3]);
+              $('.m_selectpicker').selectpicker('refresh');
+                
+            //   $('.m_selectpicker').selectpicker('refresh');
+           // window.location.href = baseurl+'Ledger_heads';
+            }
+        });
+  }
+  internal_loan_details()
+  function internal_loan_details(){
+    var internal_loan_id=$('#internal_loan_id').val();
+    $('#internal_loan_amount').val('0');
+    $.ajax({
+            type: "POST",
+            url: baseurl+'VoucherAccounts/get_internal_loan_details',
+            async: false,
+            data:"internal_loan_id="+internal_loan_id,
+            dataType: "json",
+            success: function(response)
+            {
+                if(response){
+                    $('#internal_loan_amount').empty().val(response.balance_amount > 0 ? response.balance_amount : '0');
+                }
+            }
+        });
+        
+  }
+  pcfc_balance()
+  function pcfc_balance(){
+    var pcfc_id=$('#int_pcfc_id').val();
+    $.ajax({
+            type: "POST",
+            url: baseurl+'VoucherAccounts/get_pcfc_details',
+            async: false,
+            data:"pcfc_id="+pcfc_id,
+            dataType: "json",
+            success: function(response)
+            {
+                
+                $('#final_pcfc_id' ).val(pcfc_id);
+                    $('#pcfccurrency_symbol').html(response.currency_code);
+                    $('#pcfccurrency_lbl_symbol').html(response.currency_code);
+                    $('#pcfccurrency_amt_symbol').html(response.currency_code);
+                    $('#pcfccurrency_rt_symbol').html(response.currency_code);
+
+                    $('#pcfc_rate_lbl').html(response.rate_per_usd);
+                    $('#pcfc_rate').val(response.rate_per_usd);
+                    $('#pcfc_balance').html(response.balance_amount > 0 ? response.balance_amount : "");
+            }
+        });
+  }
+  getAmountInINR()
+  function  getAmountInINR(val){
+   var fc_amount_usd = $('#fc_amount_usd').val();
+   var fc_rate = $('#fc_rate').val();
+
+   var pcfc_amount_usd = $('#pcfc_amount_usd').val();
+   var pcfc_rate = $('#pcfc_rate').val();
+
+   var current_amt_usd = $('#current_amt_usd').val();
+   var current_rate_usd = $('#current_rate_usd').val();
+
+   var others_amount_usd = $('#others_amount_usd').val();
+   var others_amount_rate = $('#others_amount_rate').val();
+
+   if(fc_amount_usd==''){
+    fc_amount_usd=0;
+   }
+   if(fc_rate==''){
+    fc_rate=0;
+   }
+
+   if(pcfc_amount_usd==''){
+    pcfc_amount_usd=0;
+   }
+   if(pcfc_rate==''){
+    pcfc_rate=0;
+   }
+
+   if(current_amt_usd==''){
+    current_amt_usd=0;
+   }
+   if(current_rate_usd==''){
+    current_rate_usd=0;
+   }
+   if(others_amount_usd==''){
+    others_amount_usd=0;
+   }
+   if(others_amount_rate==''){
+    others_amount_rate=0;
+   }
+   var fc_amount_inr = parseFloat(fc_amount_usd)*parseFloat(fc_rate);
+
+   var pcfc_amount_inr = parseFloat(pcfc_amount_usd)*parseFloat(pcfc_rate);
+
+   var current_amount_inr = parseFloat(current_amt_usd)*parseFloat(current_rate_usd);
+
+   var others_amount_inr = parseFloat(others_amount_usd)*parseFloat(others_amount_rate);
+
+   $('#fc_amount_inr').val(fc_amount_inr.toFixed('2'));
+
+   $('#pcfc_amount_inr').val(pcfc_amount_inr.toFixed('2'));
+
+   $('#current_amt_inr').val(current_amount_inr.toFixed('2'));
+
+   $('#others_amount_inr').val(others_amount_inr.toFixed('2'));
+
+  }
+  
+  
+  function voucher_validation()
+   {
+    
+      var err = 0;
+   
+      var date = $('#date').val();
+      var company_id = $('#company_id').val();
+      var bank_id = $('#bank_details_id').val();
+      var ledger_head_id = $('#ledger_head_id').val();
+      var type_dn_box = $('#type_dn_box').val();
+      var payment_mode = $('#payment_mode').val();
+           
+      if(date == '')
+      {
+         $('#date_err').html('Date is required!');
+         err++;
+         
+      }else{
+         $('#date_err').html('');
+      }  
+      if(company_id == '')
+      {
+         $('#company_id_err').html('company name is required!');
+         err++;
+         
+      }else{
+         $('#company_id_err').html('');
+      }  
+      if(bank_id == '')
+      {
+         $('#bank_id_err').html('Bank name is required!');
+         err++;
+         
+      }else{
+         $('#bank_id_err').html('');
+      }  
+
+      if(ledger_head_id == '')
+      {
+         $('#ledger_head_id_err').html('Ledger Head is required!');
+         err++;
+         
+      }else{
+         $('#ledger_head_id_err').html('');
+      }  
+
+      if(type_dn_box == '')
+      {
+         $('#type_dn_box_err').html('Select Ledger Type!');
+         err++;
+         
+      }else{
+         $('#type_dn_box_err').html('');
+      }
+
+      if(payment_mode == '')
+      {
+         $('#payment_mode_err').html('Select Payment Mode!');
+         err++;
+         
+      }else{
+         $('#payment_mode_err').html('');
+      }
+
+    
+      if(type_dn_box =='buyer'){
+
+        var buyer_order_id = $('#buyer_order_id').val();
+        var buyer_amount = $('#buyer_amount').val();
+        var currency_id = $('#currency_id').val();
+
+        if(buyer_order_id == '')
+        {
+            $('#buyer_order_id_err').html('Select Buyer!');
+            err++;
+            
+        }else{
+            $('#buyer_order_id_err').html('');
+        }
+        if(buyer_amount == '' || buyer_amount == 0)
+        {
+            $('#buyer_amount_err').html('Amount is Required!');
+            err++;
+            
+        }else{
+            $('#buyer_amount_err').html('');
+        }
+        if(currency_id == '')
+        {
+            $('#currency_id_err').html('currency is required!');
+            err++;
+         
+        }else{
+            $('#currency_id_err').html('');
+        }  
+      }
+      if(type_dn_box =='vendor'){
+
+        var department_id = $('#department_id').val();
+        var vendor_type_id = $('#vendor_type_id').val();
+        var vendor_id = $('#vendor_id').val();  
+        var vendor_amount = $('#vendor_amount').val();    
+
+            if(department_id == '')
+            {
+                $('#department_id_err').html('Select Department!');
+                err++;
+                
+            }else{
+                $('#department_id_err').html('');
+            }
+            if(vendor_type_id == '')
+            {
+                $('#vendor_type_id_err').html('Select Vendor Type!');
+                err++;
+                
+            }else{
+                $('#vendor_type_id_err').html('');
+            }
+            if(vendor_id == '')
+            {
+                $('#vendor_id_err').html('Select Vendor!');
+                err++;
+                
+            }else{
+                $('#vendor_id_err').html('');
+            }
+            if(vendor_amount == '' || vendor_amount == 0)
+            {
+                $('#vendor_amount_err').html('Amount is Required!');
+                err++;
+                
+            }else{
+                $('#vendor_amount_err').html('');
+            }
+        }
+        if(type_dn_box =='staff'){
+
+        var staff_id = $('#staff_id').val();
+
+        var staff_amount = $('#staff_amount').val();
+            if(staff_id == '')
+            {
+                $('#staff_id_err').html('Select Staff Name!');
+                err++;
+                
+            }else{
+                $('#staff_id_err').html('');
+            }
+            if(staff_amount == '' || staff_amount == 0)
+            {
+                $('#staff_amount_err').html('Amount is Required!');
+                err++;
+                
+            }else{
+                $('#staff_amount_err').html('');
+            }
+        }
+        // if(type_dn_box =='interest'){
+
+        //     var int_type = $('#int_type').val();
+            
+           
+        //     if(int_type==''){
+        //         $('#int_type_err').html('Select Interest Type!');
+        //         err++;
+        //     }
+            // if(int_type=='pcfc'){
+
+            //         var int_pcfc_id = $('#int_pcfc_id').val();
+            //         var int_pcfc_amount = $('#int_pcfc_amount').val();
+
+            //         if(int_pcfc_id == '')
+            //         {
+            //             $('#int_pcfc_id_err').html('Select PCFC!');
+            //             err++;
+                        
+            //         }else{
+            //             $('#int_pcfc_id_err').html('');
+            //         }
+            //         if(int_pcfc_amount == '' || int_pcfc_amount =0)
+            //         {
+            //             $('#int_pcfc_amount_err').html('Amount is required!');
+            //             err++;
+                        
+            //         }else{
+            //             $('#int_pcfc_amount_err').html('');
+            //         }
+
+                
+                // if(int_type=='internal_loan'){
+
+                //     var internal_loan_id = $('#internal_loan_id').val();
+                //     var internal_loan_amount = $('#internal_loan_amount').val();
+
+                //     if(internal_loan_id == '')
+                //     {
+                //         $('#internal_loan_id_err').html('Select Internal Loan!');
+                //         err++;
+                        
+                //     }else{
+                //         $('#internal_loan_id_err').html('');
+                //     }
+                //     if(internal_loan_amount == '' || internal_loan_amount =0)
+                //     {
+                //         $('#internal_loan_amount_err').html('Amount is required!');
+                //         err++;
+                        
+                //     }else{
+                //         $('#internal_loan_amount_err').html('');
+                //     }
+
+                // }
+          //  }
+            
+       // }
+   
+        if(type_dn_box =='others'){
+
+            var others_amount_inr = $('#others_amount_inr').val();
+       
+            if(others_amount_inr == '' || others_amount_inr == 0)
+            {
+                $('#others_amount_inr_err').html('Amount is Required!');
+                err++;
+                
+            }else{
+                $('#others_amount_inr_err').html('');
+            }
+        }
+
+       
+        if ($("#forward_contract_list").is(":checked")==true){ 
+            // alert("hi");
+            var fc_id = $('#fc_id').val();
+            var fc_amount_usd = $('#fc_amount_usd').val();
+          
+            var fc_rate = $('#fc_rate').val();
+            var fc_amount_inr = $('#fc_amount_inr').val();
+
+            if(fc_id ==''){
+                $('#fc_id_err').html('Forward Contract is required!');
+                err++;
+         
+            }else{
+                $('#fc_id_err').html('');
+               
+            }
+        }
+
+        if ($("#pcfc_list").is(":checked")==true){ 
+            // alert("hi");
+            var pcfc_id = $('#pcfc_id').val();
+            var pcfc_amount_usd = $('#pcfc_amount_usd').val();
+          
+            var pcfc_rate = $('#pcfc_rate').val();
+            var pcfc_amount_inr = $('#pcfc_amount_inr').val();
+
+            if(pcfc_id ==''){
+                $('#pcfc_id_err').html('PCFC is required!');
+                err++;
+         
+            }else{
+                $('#pcfc_id_err').html('');
+               
+            }
+        }
+
+        if ($("#eefc_list").is(":checked")==true){ 
+            // alert("hi");
+            var pcfc_id = $('#eefc_id').val();
+            var pcfc_amount_usd = $('#eefc_amount_usd').val();
+          
+            var pcfc_rate = $('#eefc_rate').val();
+            var pcfc_amount_inr = $('#eefc_amount_inr').val();
+
+            if(pcfc_id ==''){
+                $('#eefc_id_err').html('EEFC is required!');
+                err++;
+         
+            }else{
+                $('#eefc_id_err').html('');
+               
+            }
+        }
+        if($("#current_acc_chk_box_id").is(":checked")==true){ 
+        
+            var current_amt_inr = $('#current_amt_inr').val();
+          
+            if(current_amt_inr =='' || current_amt_inr ==0){
+                $('#current_amt_inr_err').html('Amount is required!');
+                err++;
+         
+            }else{
+                
+              
+            }
+        }
+      
+      
+      
+
+    if(err>0){ 
+        return false 
+    }
+    else{
+        return true; 
+    }
+   
+   }
+</script>
+
+<script>
+    function fw_cont_lst() {
+        var forward_contract_list = document.getElementById("forward_contract_list");
+        var forward_contract_box = document.getElementById("forward_contract_box");
+        if (forward_contract_list.checked) {
+            forward_contract_box.style.display = "block";
+        } else {
+            forward_contract_box.style.display = "none";
+        }
+    }
+
+    function pcfc_lst() {
+        var pcfc_list = document.getElementById("pcfc_list");
+        var pcfc_box = document.getElementById("pcfc_box");
+        if (pcfc_list.checked) {
+            pcfc_box.style.display = "block";
+        } else {
+            pcfc_box.style.display = "none";
+        }
+    }
+
+    function eefc_lst() {
+        var eefc_list = document.getElementById("eefc_list");
+        var eefc_box = document.getElementById("eefc_box");
+        if (eefc_list.checked) {
+            eefc_box.style.display = "block";
+        } else {
+            eefc_box.style.display = "none";
+        }
+    }
+
+    function current_acc_chk() {
+        var current_acc_chk_box_id = document.getElementById("current_acc_chk_box_id");
+        var buyer_current_acc = document.getElementById("buyer_current_acc");
+        if (current_acc_chk_box_id.checked) {
+            buyer_current_acc.style.display = "block";
+        } else {
+            buyer_current_acc.style.display = "none";
+        }
+    }
+</script>
+
+   </body>
+   <!-- end::Body -->
+</html>
