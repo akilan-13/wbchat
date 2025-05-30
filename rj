@@ -1,0 +1,2478 @@
+<?php defined('BASEPATH') or exit('No direct script access allowed');
+
+/* ************************************************************************************
+Purpose : To handle all user functions
+Date    : 09-06-2023
+ ***************************************************************************************/
+class VoucherAccounts extends CI_Controller
+{
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->load->model(array('Setting_model', 'Insurance_model', 'Report_model', 'Bankdetail_model', 'Product_model', 'User_model', 'Profile_model', 'Mailbox_model', 'Voucher_model', 'Department_model'));
+        $admindata = $this->session->userdata('admindata');
+        if ($admindata['user_id'] > 0) {
+            //do something
+        } else {
+            redirect('login'); //if session is not there, redirect to login page
+        }
+        date_default_timezone_set("Asia/Kolkata");
+
+    }
+    // To list user details
+    public function index()
+    {
+
+        $data['company_list'] = $this->Voucher_model->get_exporter_list();
+
+
+		// print_r($data['company_list']);
+		// exit;
+
+        $data['buyer_order_list'] = $this->Voucher_model->get_buyer_order_list();
+
+		// print_r($data['buyer_order_list']);
+		// exit;
+
+
+        $data['supplier_po_list'] = $this->Voucher_model->vendor_list();
+
+		// print_r($data['supplier_po_list']);
+		// exit;
+
+        $data['currency_list'] = $this->Bankdetail_model->get_currency_list();
+
+		// print_r($data['currency_list']);
+		// exit;
+
+        $data['forward_contract_list'] = $this->Voucher_model->get_forward_contract_list();
+
+		// print_r($data['forward_contract_list']);
+		// exit;
+
+        $data['pcfc_list'] = $this->Voucher_model->get_pcfc_list();
+
+		// print_r($data['pcfc_list']);
+		// exit;
+
+        // $data['eefc_list'] = $this->Voucher_model->get_eefc_list();
+
+		// print_r($data['eefc_list']);
+		// exit;
+
+        $data['internal_loan_list'] = $this->Voucher_model->get_internal_loan_list();
+
+		
+
+        $data['fd_list'] = $this->Voucher_model->get_fixed_deposit_list();
+
+
+        $data['department_list'] = $this->Department_model->get_department_list();
+
+		
+
+		$data['staff_list'] = $this->Voucher_model->get_staff_list();
+
+
+        $data['insurance_list'] = $this->Insurance_model->get_insurance_list();
+
+		
+
+		$data['vendor_list'] =$this->db->query("
+								SELECT vendor.vendor_id,vendor.vendor_name, vendor_type.vendor_type_id ,vendor_type.vendor_type
+								FROM vendor
+								LEFT JOIN vendor_type ON vendor.vendor_type_id = vendor_type.vendor_type_id
+								LEFT JOIN department ON vendor.department_id = department.department_id
+								WHERE vendor.status = '0'
+								ORDER BY vendor_type.vendor_type_id ASC, vendor.vendor_name ASC
+							")->result_array();
+
+		// 	print_r($data['vendor_list']);
+		// exit;
+
+        // print_r($data);exit;
+
+        $this->load->view('voucher/voucher_add', $data);
+
+        // $this->load->view('voucher/voucher_add');
+    }
+    public function tally_insert()
+    {
+        $data['year_fil'] = $this->input->post('ypick');
+
+        $month = $this->input->post('month');
+
+        if ($data['year_fil'] == '') {
+            $date = date('d', strtotime(date('d-m-Y')));
+            $data['month'] = $month = date('M', strtotime(date('d-m-Y')));
+            $month_val = date('m', strtotime(date('d-m-Y')));
+            $year = date('Y', strtotime(date('d-m-Y')));
+            $financial_year_to = ($month_val > 3) ? $year + 1 : $year;
+            $financial_year_from = $financial_year_to - 1;
+
+            $data['year'] = $financial_year_from . '-' . $financial_year_to;
+        } else {
+
+            $data['year'] = $data['year_fil'];
+        }
+        // print_r($data['year']);exit;
+        if ($month == '') {
+            $data['month'] = date('M');
+        } else {
+            $data['month'] = $month;
+        }
+
+        $data['company_bank'] = $this->Report_model->get_exporter_with_bank_list();
+
+        foreach ($data['company_bank'] as $companylist) {
+
+            $tally_statement[] = $this->db->query("SELECT cash_balance, cash_adj, profit_loss FROM `tally_statement` WHERE company_id='" . $companylist['exporter_id'] . "' AND bank_id='" . $companylist['bank_detail_id'] . "' AND year='" . $data['year'] . "' AND month='" . $data['month'] . "'")->row();
+
+        }
+
+        // echo '<pre>';
+        // print_r($data['buyer_order_list']);
+        // echo '</pre>';exit;
+
+        $data['tally_statement_list'] = $tally_statement;
+
+        $this->load->view('voucher/tally_insert', $data);
+    }
+
+    public function update_tally_insert_bank()
+    {
+        $company_id = $_POST["company_id"];
+        $bank_id = $_POST["bank_id"];
+        $year = $_POST["year"];
+        $month = $_POST["month_inp"];
+        $cash_balance = $_POST["cash_balance"];
+        $cash_adj = $_POST["cash_adj"];
+        $profit_loss = $_POST["profit_loss"];
+        for ($i = 0; $i < count($company_id); $i++) {
+            $data['company_id'] = $company_id[$i];
+            $data['bank_id'] = $bank_id[$i];
+            $data['year'] = $year;
+            $data['month'] = $month;
+            $data['cash_balance'] = $_POST["cash_balance"][$i];
+            $data['cash_adj'] = $_POST["cash_adj"][$i];
+            $data['profit_loss'] = $_POST["profit_loss"][$i];
+
+            $get_tally_insert_row = $this->Voucher_model->get_tally_insert_row($data);
+
+            if (count($get_tally_insert_row) > 0) {
+                $update = $this->Voucher_model->update_tally_insert_row($data);
+            } else {
+
+                $update = $this->Voucher_model->create_tally_insert_row($data);
+            }
+        }
+        if ($update) {
+            $this->session->set_flashdata('osconfig_success', 'Tally Statement has been updated successfully.');
+        } else {
+            $this->session->set_flashdata('osconfig_err', 'Something went wrong');
+        }
+        redirect('/VoucherAccounts/tally_insert');
+    }
+
+    public function voucher_save()
+    {
+		// print_r($this->input->post());
+		// 		exit;
+
+        // $pcfc_id=$this->input->post('pcfc_id');
+        $last_sid_detail = $this->db->query("SELECT * FROM `voucher` ORDER BY voucher_id DESC")->row();
+
+        if ($last_sid_detail != '') {
+
+            $last_data = $last_sid_detail ? $last_sid_detail->voucher_no : 1;
+            // print_r($last_data);
+            // exit;
+            $year = substr(date("y"), -2);
+            $slice = explode("/", $last_data);
+            $result = preg_replace('/[^0-9]/', ' ', $slice[0]);
+            // print_r( $result);
+
+            function request_num($input, $pad_len = 3, $prefix = null)
+            {
+                // if ($pad_len <= strlen($input))
+                //     trigger_error('<strong>'.$pad_len.'</strong> cannot be less than or equal to the length of <strong>'.$input.'</strong> to generate sale number', E_USER_ERROR);
+
+                if (is_string($prefix)) {
+                    return sprintf("%s%s", $prefix, str_pad($input, $pad_len, "0", STR_PAD_LEFT));
+                }
+
+                return str_pad($input, $pad_len, "0", STR_PAD_LEFT);
+            }
+
+            $request = request_num(((int) $result + 1), 4, "VOU-");
+
+            $request_id = $request . '/' . $year;
+
+            $voucher_num = $request_id;
+
+        } else {
+            $year = substr(date("y"), -2);
+            $voucher_num = 'VOU-0001/' . $year;
+        }
+        // exit;
+		// print_r($this->input->post());
+		// 		exit;
+
+        $data['voucher_no'] = $voucher_num;
+
+        $data['voucher_date'] = date('Y-m-d', strtotime($this->input->post('date')));
+        $data['company_id'] = $this->input->post('company_id');
+        $data['bank_details_id'] = $this->input->post('bank_details_id');
+        $data['ledger_head_id'] = $this->input->post('ledger_head_id');
+        $data['dr_cr'] = $this->input->post('dr_cr');
+        $data['act_pro'] = $this->input->post('act_pro');
+        $data['type_dn_box'] = $this->input->post('type_dn_box');
+        $data['payment_mode'] = $this->input->post('payment_mode');
+        $data['int_type'] = $this->input->post('int_type');
+        $data['buyer_order_id'] = $this->input->post('buyer_order_id');
+        $data['delivery_invoice_id'] = $this->input->post('delivery_invoice_id');
+        $data['currency_id'] = $this->input->post('currency_id');
+        $data['invoice_id'] = $this->input->post('invoice_id');
+        $data['voucher_amount'] = $this->input->post('buyer_amount');
+        $data['gst_perc'] = $this->input->post('gst_perc');
+        $data['tds_perc'] = $this->input->post('tds_perc');
+        $data['cheque_no'] = $this->input->post('cheque_no');
+        $data['cheque_date'] = date('Y-m-d', strtotime($this->input->post('cheque_date')));
+        $data['description'] = $this->input->post('description');
+        $data['particulars'] = $this->input->post('particulars_desc');
+
+        $data['created_on'] = date('Y-m-d H:i:s');
+
+        $data['created_by'] = $_SESSION['admindata']['user_id'];
+		
+
+		$fc_chk = $this->input->post('fc_chk')??"";
+        $pcfc_chk = $this->input->post('pcfc_chk')??"";
+        $eefc_chk = $this->input->post('eefc_chk')??"";
+        $currt_ac_chk = $this->input->post('currt_ac_chk')??"";
+        $gst_chk = $this->input->post('gst_chk')??"";
+
+        // print_r($data['created_by']);exit;
+
+        // $data['buyer_conv_rate']=$this->input->post('buyer_conv_rate');
+
+        // $data['voucher_amount_inr']=$data['voucher_amount']*$data['buyer_conv_rate'];
+
+        $data['fc_id'] = $this->input->post('fc_id');
+
+        // print_r($data['fc_id']);exit;
+        // print_r("hi".$this->input->post('pcfc_id'));
+        if ($data['type_dn_box'] == 'buyer') {
+
+            $data['fc_count'] = $fc_count = $this->input->post('fc_details_append_block_count');
+            $data['pcfc_count'] = $pcfc_count = $this->input->post('pcfc_details_append_block_count');
+
+            // $data['eefc_count'] = $eefc_count = $this->input->post('eefc_details_append_block_count');
+            $data['eefc_count'] = $eefc_count = 0;
+            $data['eefc_count'] = $eefc_count_new=  $this->input->post('eefc_details_append_block_count');
+
+            $fc_id = $this->input->post('fc_id');
+            $fc_balance = $this->input->post('fc_balance');
+            $fc_amount_usd = $this->input->post('fc_amount_usd');
+            $fc_rate = $this->input->post('fc_rate');
+            $fc_amount_inr = $this->input->post('fc_amount_inr');
+
+            $pcfc_balance = $this->input->post('pcfc_balance');
+            $pcfc_amount_usd = $this->input->post('pcfc_amount_usd');
+            $pcfc_rate = $this->input->post('pcfc_rate');
+            $pcfc_amount_inr = $this->input->post('pcfc_amount_inr');
+
+            $eefc_manual_no = $this->input->post('eefc_manual_no');
+            $final_eefc_bank_id = $this->input->post('final_eefc_bank_id');
+            $final_eefc_currency_id = $this->input->post('final_eefc_currency_id');
+            $eefc_amount_usd = $this->input->post('eefc_amount_usd');
+            $eefc_amount_inr = $this->input->post('eefc_amount_inr');
+			
+            $data['current_amt_usd'] = $this->input->post('current_amt_usd');
+            $data['current_rate'] = $this->input->post('current_rate_usd');
+            $data['current_amt_inr'] = $this->input->post('current_amt_inr');
+			$data['eefc_id']="0";
+            
+
+            $data['voucher_amount_inr'] = $data['current_amt_inr'];
+			if($eefc_chk){
+				$next_eefc = $this->Voucher_model->eefc_next_auto_id();
+				$next_eefc_id=$next_eefc->AUTO_INCREMENT;
+				$data['eefc_id']=$next_eefc_id;
+				for ($j = 0; $j < $eefc_count_new; $j++) {
+					$eefc_manual_no_final = $eefc_manual_no[$j];
+					$final_eefc_bank_id_final = $final_eefc_bank_id[$j];
+					$final_eefc_currency_id_final = $final_eefc_currency_id[$j];
+					$eefc_amount_usd_final = $eefc_amount_usd[$j];
+
+					$company_id = $this->input->post('company_id');
+					$bank_details_id = $data['final_eefc_bank_id'];
+					$ledger_head_id = $this->input->post('ledger_head_id');
+					$payment_mode = $this->input->post('payment_mode');
+					$buyer_id = $this->input->post('buyer_order_id');
+					$eefc_date=date('Y-m-d', strtotime($this->input->post('date')));
+
+					$data_eefc =[
+						'eefc_manual_no'=>$eefc_manual_no_final,
+						'eefc_date'=>$eefc_date,
+						'company_id'=>$company_id,
+						'bank_id'=>$final_eefc_bank_id_final,
+						'currency_id'=>$final_eefc_currency_id_final,
+						'amount'=>$eefc_amount_usd_final,
+						'balance_amount'=>$eefc_amount_usd_final,
+						'created_on'=> date('Y-m-d H:i:s'),
+						'created_by'=> $_SESSION['admindata']['user_id'],
+						'modified_on'=> date('Y-m-d H:i:s'),
+						'modified_by'=> $_SESSION['admindata']['user_id'],
+						'status'=> 0, 
+					];
+					$result_eefc = $this->db->insert('before_eefc',$data_eefc);
+
+				}
+			
+			}
+
+            //$buyer_update = $this->Voucher_model->update_buyer_order_balance_by_voucher($data);
+        }
+
+        if ($data['type_dn_box'] == 'vendor') {
+            $data['department_id'] = $this->input->post('department_id');
+            $data['vendor_type_id'] = $this->input->post('vendor_type_id');
+            $data['vendor_id'] = $this->input->post('vendor_id');
+            $supplier_po_idval = $this->input->post('supplier_po_id');
+
+            $data['supplier_po_id'] = isset($supplier_po_idval) ? $supplier_po_idval : "";
+
+            $data['voucher_amount'] = $this->input->post('vendor_amount');
+            $data['voucher_amount_inr'] = $this->input->post('vendor_amount');
+
+            //$spo_update = $this->Voucher_model->update_spo_balance_by_voucher($data);
+        }
+
+        $data['staff_id'] = "";
+
+        if ($data['type_dn_box'] == 'staff') {
+            $data['staff_id'] = $this->input->post('staff_id');
+            $data['voucher_amount'] = $this->input->post('staff_amount');
+            $data['voucher_amount_inr'] = $this->input->post('staff_amount');
+        }
+
+        if ($data['type_dn_box'] == 'others') {
+            $data['others_amount_usd'] = $this->input->post('others_amount_usd');
+            $data['others_amount_rate'] = $this->input->post('others_amount_rate');
+            $data['others_amount_inr'] = $this->input->post('others_amount_inr');
+            $data['voucher_amount'] = $this->input->post('others_amount_inr');
+            $data['voucher_amount_inr'] = $this->input->post('others_amount_inr');
+        }
+
+        if ($data['type_dn_box'] == 'FD Interest') {
+            $data['fd_int'] = $this->input->post('fd_int');
+            if ($data['fd_int'] == 'To Current Acc') {
+                $data['fd_id'] = $this->input->post('tocurrent_fd_id');
+                $data['fd_current_amount'] = $this->input->post('current_acc_amount');
+                $data['voucher_amount'] = $this->input->post('current_acc_amount');
+                $data['voucher_amount_inr'] = $this->input->post('current_acc_amount');
+            } elseif ($data['fd_int'] == 'To FD Acc') {
+                $data['fd_id'] = $this->input->post('fd_id');
+                $data['int_bal'] = 'Interest';
+                $data['fd_acc_amount'] = $this->input->post('fd_acc_amount');
+                $data['voucher_amount'] = $this->input->post('fd_acc_amount');
+                $data['voucher_amount_inr'] = $this->input->post('fd_acc_amount');
+
+                $update_fd = $this->Voucher_model->update_fd_amount($data);
+            }
+        }
+
+        if ($data['type_dn_box'] == 'internal loan') {
+            //if($data['int_type']=='internal_loan'){
+            $data['internal_loan_id'] = $this->input->post('internal_loan_id');
+            $data['internal_loan_interest'] = $this->input->post('check_interest') ??"0";
+
+            $data['voucher_amount'] = $this->input->post('internal_loan_amount');
+            $data['voucher_amount_inr'] = $this->input->post('internal_loan_amount');
+            $data['interest_pcfc_id'] = '';
+            // }
+            //     if($data['int_type']=='pcfc'){
+            //         $data['int_pcfc_id']=$this->input->post('int_pcfc_id');
+            //         $data['voucher_amount']=$this->input->post('int_pcfc_amount');
+            //         $data['voucher_amount_inr']=$this->input->post('int_pcfc_amount');
+            //     }
+        }
+
+        if ($data['fc_id'] != '') {
+            $data['fc_balance_final'] = $data['fc_amount_usd'];
+            //$update_fc = $this->Voucher_model->update_fc_balance($data);
+        }
+        if ($data['pcfc_id'] != '') {
+            $data['pcfc_balance_final'] = $data['pcfc_balance'] - $data['pcfc_amount_usd'];
+            //$update_pcfc = $this->Voucher_model->update_pcfc_balance($data);
+        }
+
+        // print_r($data['voucher_amount']);exit;
+
+        $date = date('d', strtotime($data['voucher_date']));
+        $month = date('m', strtotime($data['voucher_date']));
+        $data['month'] = $month_val = date('M', strtotime($data['voucher_date']));
+        $year = date('Y', strtotime($data['voucher_date']));
+
+        $financial_year_to = ($month > 3) ? $year + 1 : $year;
+        $financial_year_from = $financial_year_to - 1;
+
+        switch ($month_val) {
+            case 'Jan':
+                $data['jan_value'] = $data['voucher_amount'];
+                break;
+            case 'Feb':
+                $data['feb_value'] = $data['voucher_amount'];
+                break;
+            case 'Mar':
+                $data['mar_value'] = $data['voucher_amount'];
+                break;
+            case 'Apr':
+                $data['apr_value'] = $data['voucher_amount'];
+                break;
+            case 'May':
+                $data['may_value'] = $data['voucher_amount'];
+                break;
+            case 'Jun':
+                $data['jun_value'] = $data['voucher_amount'];
+                break;
+            case 'Jul':
+                $data['jul_value'] = $data['voucher_amount'];
+                break;
+            case 'Aug':
+                $data['aug_value'] = $data['voucher_amount'];
+                break;
+            case 'Sept':
+                $data['sept_value'] = $data['voucher_amount'];
+                break;
+            case 'Oct':
+                $data['oct_value'] = $data['voucher_amount'];
+                break;
+            case 'Nov':
+                $data['nov_value'] = $data['voucher_amount'];
+                break;
+            case 'Dec':
+                $data['dec_value'] = $data['voucher_amount'];
+                break;
+
+        }
+
+        $data['year'] = $financial_year_from . '-' . $financial_year_to;
+
+        $ledger_group = $this->Voucher_model->get_ledger_group_by_head_id($data['ledger_head_id']);
+
+        $data['ledger_group_id'] = $ledger_group->ledger_group_id;
+
+        $get_monthly_ledger_details = $this->Voucher_model->get_monthly_ledger_details($data);
+
+        $get_yearly_turnover_details = $this->Voucher_model->get_yearly_turnover_details($data);
+
+        // print_r($get_yearly_turnover_details);exit;
+        // print_r(count($get_monthly_ledger_details));exit;
+        if (count($get_monthly_ledger_details) > 0) {
+
+            //    $result_monthly_ledger = $this->Voucher_model->update_monthly_ledger_details($data);
+        } else {
+
+            //    $result_monthly_ledger = $this->Voucher_model->create_monthly_ledger_details($data);
+        }
+        $data['credit_amount'] = 0;
+        $data['debit_amount'] = 0;
+
+        if ($data['dr_cr'] == 'credit') {
+            $data['credit_amount'] = $data['voucher_amount'];
+        } else {
+            $data['debit_amount'] = $data['voucher_amount'];
+        }
+
+        $data['closing_balance'] = $data['credit_amount'] - $data['debit_amount'];
+
+        if (count($get_yearly_turnover_details) > 0) {
+
+            //    $result_turnover_yearly = $this->Voucher_model->update_yearly_turnover_details($data);
+        } else {
+
+            //    $result_turnover_yearly = $this->Voucher_model->create_yearly_turnover_details($data);
+        }
+
+
+
+        $result = $this->Voucher_model->create_voucher($data);
+
+        $voucher = $this->Voucher_model->get_voucher_details();
+
+        $data['voucher_id'] = $voucher->voucher_id;
+
+        // print_r($data['voucher_id']);
+		// exit;
+
+        if ($data['delivery_invoice_id'] != '') {
+            $di_update = $this->db->query("UPDATE voucher set delivery_invoice_id='" . $data['delivery_invoice_id'] . "' where voucher_id='" . $data['voucher_id'] . "'");
+        }
+		// print_r("chk1");
+		// exit;
+        if ($data['type_dn_box'] == 'buyer') {
+
+            for ($i = 0; $i < $fc_count; $i++) {
+                $data['fc_id'] = $fc_id[$i];
+                $data['fc_balance'] = $fc_balance[$i];
+                $data['fc_amount_usd'] = $fc_amount_usd[$i];
+                $data['fc_rate'] = $fc_rate[$i];
+                $data['fc_amount_inr'] = $fc_amount_inr[$i];
+
+                $total_fc_amount += $data['fc_amount_usd'];
+                $total_fc_amount_inr += $data['fc_amount_inr'];
+
+                if ($data['delivery_invoice_id'] != '') {
+                    $di_update = $this->db->query("UPDATE voucher set delivery_invoice_id='" . $data['delivery_invoice_id'] . "' where voucher_id='" . $data['voucher_id'] . "'");
+                }
+
+                $insert_fc = $this->Voucher_model->insert_fc_details($data);
+            }
+
+            $pcfc_id = $this->input->post('final_pcfc_id');
+
+            for ($j = 0; $j < $pcfc_count; $j++) {
+                $data['pcfc_id'] = $pcfc_id[$j];
+                $data['pcfc_balance'] = $pcfc_balance[$j];
+                $data['pcfc_amount_usd'] = $pcfc_amount_usd[$j];
+                $data['pcfc_rate'] = $pcfc_rate[$j];
+                $data['pcfc_amount_inr'] = $pcfc_amount_inr[$j];
+
+                $total_pcfc_amount += $data['pcfc_amount_usd'];
+
+                $total_pcfc_amount_inr += $data['pcfc_amount_inr'];
+
+                // print_r($data);
+
+                // $update_pcfc = $this->Voucher_model->update_pcfc_balance($data);
+                $insert_pcfc = $this->Voucher_model->insert_pcfc_details($data);
+
+            }  
+				
+
+			// if($eefc_chk){
+				
+			// 	for ($j = 0; $j < $eefc_count_new; $j++) {
+				
+			// 		$eefc_manual_no_final = $eefc_manual_no[$j];
+			// 		$final_eefc_bank_id_final = $final_eefc_bank_id[$j];
+			// 		$final_eefc_currency_id_final = $final_eefc_currency_id[$j];
+			// 		$eefc_amount_usd_final = $eefc_amount_usd[$j];
+
+			// 		$eefc_details = $this->db->select('*')
+			// 			->from('eefc_new')
+			// 			->where('bank_id', $final_eefc_bank_id_final)
+			// 			->where('status',0)
+			// 			->get()
+			// 			->row();
+
+			// 		$company_id = $this->input->post('company_id');
+			// 		$bank_details_id = $data['final_eefc_bank_id'];
+			// 		$ledger_head_id = $this->input->post('ledger_head_id');
+			// 		$payment_mode = $this->input->post('payment_mode');
+			// 		$buyer_id = $this->input->post('buyer_order_id');
+			// 		$eefc_date=date('Y-m-d', strtotime($this->input->post('date')));
+	
+			// 		$modified_on= date('Y-m-d H:i:s');
+			// 		$modified_by= $_SESSION['admindata']['user_id'];
+			// 		// print_r($eefc_details);
+			// 		// exit;
+					
+			// 		if($eefc_details){
+
+			// 				$last_efid_detail = $this->db->query("SELECT * FROM `eefc_transaction_details` ORDER BY eefc_transaction_id DESC")->row();
+			
+			// 				$financial_year_to2 = (date('m') > 3) ? date('y') + 1 : date('y');
+			// 				$financial_year_from2 = $financial_year_to2 - 1;
+			
+			// 				$finhi = $financial_year_from2 . '-' . $financial_year_to2;
+			
+			// 				if (count($last_efid_detail) == 0) {
+			// 					//$ino = $data['invoice_no'] = date("Y").'/'.date('m').'/'.$locDetails->location_code.'/INV001';
+			// 					$data_1['eefc_trans_no'] = 'TRC/' . $finhi . '/001';
+			// 				} else {
+			// 					$lno = $last_efid_detail->eefc_trans_no;
+			// 					$exlno = explode('/', $lno);
+			// 					if ($finhi == $exlno[1]) {
+			// 						//$valexp = explode('-', $exlno[0]);
+			// 						$next_value = (int) $exlno[2] + 1;
+			// 						$slen = strlen($next_value);
+			// 						if ($slen == 1) {
+			// 							$nval = '00' . $next_value;
+			// 						} else if ($slen == 2) {
+			// 							$nval = '0' . $next_value;
+			// 						} else {
+			// 							$nval = $next_value;
+			// 						}
+			
+			// 						$data_1['eefc_trans_no'] = 'TRC/' . $finhi . '/' . $nval;
+			// 					} else {
+			// 						$data_1['eefc_trans_no'] = 'TRC/' . $finhi . '/001';
+			// 					}
+			// 				}
+						
+			// 				$data_eefc =[
+			// 					'eefc_manual_no'=>$eefc_manual_no_final,
+			// 					'balance_amount'=>$eefc_details->balance_amount+$eefc_amount_usd_final,
+			// 					'modified_on'=> date('Y-m-d H:i:s'),
+			// 					'modified_by'=> $_SESSION['admindata']['user_id'],
+			// 					'status'=> 0, 
+			// 				];
+										
+			// 				$data_eefc_tran = [
+			// 					'eefc_id' => $eefc_details->eefc_id,
+			// 					'eefc_trans_no' => $data_1['eefc_trans_no'],
+			// 					'eefc_trans_date' => $eefc_date,
+			// 					'company_id' => $company_id,
+			// 					'bank_id' => $final_eefc_bank_id_final,
+			// 					// 'ledger_head_id' => $ledger_head_id,
+			// 					'buyer_id' => $buyer_id,
+			// 					'payment_mode' => $payment_mode,
+			// 					'credit_debit' => "credit",
+			// 					'credit_eefc_amount' =>  $eefc_amount_usd_final,
+			// 					'debit_eefc_amount' => 0,
+			// 					'eefc_bal_amount' => $eefc_details->balance_amount+$eefc_amount_usd_final,
+			// 					'created_on' => date('Y-m-d H:i:s'),
+			// 					'created_by' => $_SESSION['admindata']['user_id'],
+			// 					'updated_by' =>$_SESSION['admindata']['user_id'],
+			// 					'updated_on' => date('Y-m-d H:i:s'),
+			// 					'status' => 0,
+								
+			// 				];
+			// 					$this->db->where('eefc_id', $eefc_details->eefc_id);
+			// 					$update_eefc=$this->db->update('eefc_new', $data_eefc);
+
+			// 				$this->db->insert('eefc_transaction_details', $data_eefc_tran);
+
+			// 		}else{
+					
+			// 			$last_sid_eefc_detail= $this->db->query("SELECT * FROM `eefc_new` ORDER BY eefc_id DESC")->row();
+		
+			// 			if($last_sid_eefc_detail!=''){
+
+			// 				$last_data_eefc = $last_sid_eefc_detail? $last_sid_eefc_detail->eefc_no :1;
+			// 				// print_r($last_data);
+			// 				// exit;
+			// 					$year = substr( date("y"), -2);
+			// 					$slice = explode("/", $last_data_eefc);
+			// 					$result = preg_replace('/[^0-9]/',' ', $slice[0]); 
+			// 					// print_r( $result);
+
+			// 					function request_num_eefc ($input, $pad_len = 3  , $prefix = null) {
+			// 						// if ($pad_len <= strlen($input))
+			// 						//     trigger_error('<strong>'.$pad_len.'</strong> cannot be less than or equal to the length of <strong>'.$input.'</strong> to generate sale number', E_USER_ERROR);
+								
+			// 						if (is_string($prefix))
+									
+			// 						return sprintf("%s%s", $prefix, str_pad($input, $pad_len, "0", STR_PAD_LEFT));
+								
+			// 						return str_pad($input, $pad_len, "0", STR_PAD_LEFT);
+			// 					}
+
+			// 					$request =  request_num_eefc(((int)$result+1), 4, "EEFC-");
+								
+			// 					$request_id =  $request.'/'.$year;
+
+			// 					$eefc_num = $request_id;
+			// 			}
+			// 			else{
+			// 				$year = substr( date("y"), -2);
+			// 				$eefc_num=  'EEFC-0001/'.$year;
+			// 			}
+					
+			// 				$next_eefc = $this->Voucher_model->eefc_next_auto_id();
+			// 				$next_eefc_id=$next_eefc->AUTO_INCREMENT;
+			// 				// $total_eefc_amount += $data['eefc_amount_usd'];
+			// 				$last_efid_detail = $this->db->query("SELECT * FROM `eefc_transaction_details` ORDER BY eefc_transaction_id DESC")->row();
+			
+			// 				$financial_year_to2 = (date('m') > 3) ? date('y') + 1 : date('y');
+			// 				$financial_year_from2 = $financial_year_to2 - 1;
+			
+			// 				$finhi = $financial_year_from2 . '-' . $financial_year_to2;
+			
+			// 				if (count($last_efid_detail) == 0) {
+			// 					//$ino = $data['invoice_no'] = date("Y").'/'.date('m').'/'.$locDetails->location_code.'/INV001';
+			// 					$data_1['eefc_trans_no'] = 'TRC/' . $finhi . '/001';
+			// 				} else {
+			// 					$lno = $last_efid_detail->eefc_trans_no;
+			// 					$exlno = explode('/', $lno);
+			// 					if ($finhi == $exlno[1]) {
+			// 						//$valexp = explode('-', $exlno[0]);
+			// 						$next_value = (int) $exlno[2] + 1;
+			// 						$slen = strlen($next_value);
+			// 						if ($slen == 1) {
+			// 							$nval = '00' . $next_value;
+			// 						} else if ($slen == 2) {
+			// 							$nval = '0' . $next_value;
+			// 						} else {
+			// 							$nval = $next_value;
+			// 						}
+			
+			// 						$data_1['eefc_trans_no'] = 'TRC/' . $finhi . '/' . $nval;
+			// 					} else {
+			// 						$data_1['eefc_trans_no'] = 'TRC/' . $finhi . '/001';
+			// 					}
+			// 				}
+						
+			// 				$data_eefc =[
+			// 					'eefc_no'=>$eefc_num,
+			// 					'eefc_manual_no'=>$eefc_manual_no_final,
+			// 					'eefc_date'=>$eefc_date,
+			// 					'company_id'=>$company_id,
+			// 					'bank_id'=>$final_eefc_bank_id_final,
+			// 					'currency_id'=>$final_eefc_currency_id_final,
+			// 					'amount'=>$eefc_amount_usd_final,
+			// 					'balance_amount'=>$eefc_amount_usd_final,
+			// 					'created_on'=> date('Y-m-d H:i:s'),
+			// 					'created_by'=> $_SESSION['admindata']['user_id'],
+			// 					'modified_on'=> date('Y-m-d H:i:s'),
+			// 					'modified_by'=> $_SESSION['admindata']['user_id'],
+			// 					'status'=> 0, 
+			// 				];
+			
+			// 				$data_eefc_tran = [
+			// 					'eefc_id' => $next_eefc_id,
+			// 					'eefc_trans_no' => $data_1['eefc_trans_no'],
+			// 					'eefc_trans_date' => $eefc_date,
+			// 					'company_id' => $company_id,
+			// 					'bank_id' => $final_eefc_bank_id_final,
+			// 					// 'ledger_head_id' => $ledger_head_id,
+			// 					'buyer_id' => $buyer_id,
+			// 					'payment_mode' => $payment_mode,
+			// 					'credit_debit' => "credit",
+			// 					'credit_eefc_amount' =>  $eefc_amount_usd_final,
+			// 					'debit_eefc_amount' => 0,
+			// 					'eefc_bal_amount' => $eefc_amount_usd_final,
+			// 					'created_on' => date('Y-m-d H:i:s'),
+			// 					'created_by' => $_SESSION['admindata']['user_id'],
+			// 					'updated_by' =>$_SESSION['admindata']['user_id'],
+			// 					'updated_on' => date('Y-m-d H:i:s'),
+			// 					'status' => 0,
+								
+			// 				];
+
+			// 				$result_eefc = $this->db->insert('before_eefc',$data_eefc);
+						
+			// 				$eefc_trans_result=$this->db->insert('eefc_transaction_details', $data_eefc_tran);
+							
+							
+			// 		}
+					
+	
+			// 	}
+
+			// }
+			
+
+            $data['total_fc_amount_inr'] = $total_fc_amount_inr;
+            $data['total_pcfc_amount_inr'] = $total_pcfc_amount_inr;
+            // $data['total_eefc_amount_inr'] = $total_eefc_amount_inr;
+
+            $data['total_fc_amount'] = $total_fc_amount;
+            $data['total_pcfc_amount'] = $total_pcfc_amount;
+
+            // print_r($total_fc_amount_inr);
+            // print_r($data['current_amt_inr']);
+            // print_r($total_pcfc_amount_inr);
+            // print_r($total_eefc_amount_inr);
+
+			
+            if ($total_fc_amount_inr > 0 || $data['current_amt_inr'] > 0 || $total_pcfc_amount_inr > 0 ) {
+                $data['total_voucher_amount_inr'] = $data['current_amt_inr'];
+
+                $data['total_voucher_amount'] =  $data['voucher_amount'];
+
+                // $data['total_non_actual_amount_inr'] = $total_pcfc_amount_inr + $total_eefc_amount_inr;
+                $data['total_non_actual_amount_inr'] = $total_pcfc_amount_inr ;
+
+            } elseif ($total_fc_amount_inr == 0 && $data['current_amt_inr'] == 0 && $total_pcfc_amount_inr == 0 ) {
+                $data['total_voucher_amount_inr'] = $data['voucher_amount'];
+                $data['total_voucher_amount'] = $data['voucher_amount'];
+            }
+
+            //print_r($data);exit;
+
+            $data['modified_by'] = $_SESSION['admindata']['user_id'];
+            $data['modified_on'] = date('Y-m-d H:i:s');
+
+            $update_voucher = $this->Voucher_model->update_voucher_details($data);
+
+        }
+        if ($data['type_dn_box'] == 'Deposit') {
+            $data['insurance_id'] = $this->input->post('insurance_id');
+            $data['deposit_amount'] = $this->input->post('deposit_amount');
+
+            $data['total_voucher_amount'] = $this->input->post('deposit_amount');
+            $data['total_voucher_amount_inr'] = $this->input->post('deposit_amount');
+
+            $insert_deposit = $this->db->query("INSERT INTO insurance_deposit_history(voucher_id,insurance_id,deposit_amount) VALUES('" . $data['voucher_id'] . "','" . $data['insurance_id'] . "','" . $data['deposit_amount'] . "')");
+
+            $update_voucher1 = $this->db->query("UPDATE voucher set insurance_id='" . $data['insurance_id'] . "',deposit_amount='" . $data['deposit_amount'] . "',total_voucher_amount='" . $data['total_voucher_amount'] . "',total_voucher_amount_inr='" . $data['total_voucher_amount_inr'] . "' where voucher_id='" . $data['voucher_id'] . "'");
+        }
+
+        // exit;
+
+        //exit;
+        if ($result) {
+            $this->session->set_flashdata('voucher_success', 'voucher has been created successfully.');
+        } else {
+            $this->session->set_flashdata('voucher_err', 'Something went wrong');
+        }
+        redirect('/VoucherAccounts');
+    }
+
+    public function voucher_confirm()
+    {
+
+        $this->load->view('voucher/voucher_confirm');
+    }
+    public function voucher_edit($voucher_id)
+    {
+        	
+
+        $data['company_list'] = $this->Voucher_model->get_exporter_list();
+
+        $data['buyer_order_list'] = $this->Voucher_model->get_buyer_order_list();
+
+        $data['currency_list'] = $this->Bankdetail_model->get_currency_list();
+
+        $data['forward_contract_list'] = $this->Voucher_model->get_forward_contract_list();
+        $data['pcfc_list'] = $this->Voucher_model->get_pcfc_list();
+        $data['eefc_list'] = $this->Voucher_model->get_eefc_list();
+        $data['internal_loan_list'] = $this->Voucher_model->get_internal_loan_list();
+
+        $data['department_list'] = $this->Department_model->get_department_list();
+
+        $data['staff_list'] = $this->Voucher_model->get_staff_list();
+
+        $data['voucher_details'] = $this->Voucher_model->get_voucher_by_id($voucher_id);
+
+        $data['fd_list'] = $this->Voucher_model->get_fixed_deposit_list();
+
+        $data['voucher_id'] = $voucher_id;
+
+        // print_r($data['voucher_details']);exit;
+
+        $this->load->view('voucher/voucher_edit', $data);
+
+    }
+    public function voucher_delete()
+    {
+
+        $this->load->view('voucher/voucher_delete');
+    }
+    public function voucher_view($id)
+    {
+
+        $data['voucher_details'] = $this->Voucher_model->get_voucher_details_by_id($id);
+
+        $data['fc_voucher'] = $this->Voucher_model->get_fc_details_by_voucherid($id);
+
+        $data['pcfc_voucher'] = $this->Voucher_model->get_pcfc_details_by_voucherid($id);
+
+        $data['eefc_voucher'] = $this->Voucher_model->get_eefc_details_by_voucherid($id);
+
+        $data['fd_details'] = $this->Voucher_model->get_fd_details_by_voucherid($id);
+
+        $data['ins_details'] = $this->Voucher_model->get_ins_details_by_voucherid($id);
+
+        // print_r($data['voucher_details']);exit;
+
+        $this->load->view('voucher/voucher_view', $data);
+    }
+    public function voucher_inward_chk()
+    {
+        // print_r($companyid);
+        $data['companyid'] = $this->input->post('company_id');
+        $data['date'] = $this->input->post('date');
+        $data['boid'] = $this->input->post('buyer_order_id');
+        $data['finalfcrate'] = $this->input->post('finalfcrate');
+
+        $data['currency_id'] = $this->input->post('currency_id');
+
+        // $data['pcfc_id']=$this->input->get('pcfc_id');
+
+        $data['bo_details'] = $this->db->query("SELECT cb.lead_name,c.name,product_name,order_end_date FROM buyer_order bo,buyer_order_product bop,product_items pi,products p,leads l,contact_book cb,ad_countries c WHERE bo.buyer_order_id=bop.buyer_order_id and bo.lead_id=l.lead_id and l.contact_book_id=cb.contact_book_id and cb.country=c.id and bop.product_item_id=pi.product_item_id and pi.product_id=p.product_id and bo.buyer_order_id='" . $data['boid'] . "'")->row();
+
+        $data['department'] = $this->db->query("select * from users u,department d,roles r where u.department_id=d.department_id and d.department='Accounts' and u.role_id=r.role_id")->result_array();
+
+        $data['pcfc_details'] = $this->db->query("select sum(balance_amount) as pcfc_amount from pcfc a where status!='2' and balance_amount > 0 and loan_type='pcfc' and currency_id='" . $data['currency_id'] . "'")->row();
+        $data['pcl_details'] = $this->db->query("select sum(balance_amount) as pcl_amount from pcfc where status!='2' and balance_amount > 0 and loan_type='pcl' and currency_id='" . $data['currency_id'] . "'")->row();
+        $data['eefc_details_usd'] = $this->db->query("select sum(balance_amount) as eefc_usd_amount from eefc a,currency c where a.currency_id=c.currency_id and a.status!='2' and balance_amount > 0 and currency_code='USD'")->row();
+
+        $data['eefc_details_euro'] = $this->db->query("select sum(balance_amount) as eefc_euro_amount from eefc a,currency c where a.currency_id=c.currency_id and a.status!='2' and balance_amount > 0 and currency_code='EURO'")->row();
+
+        $data['total_amount'] = $data['pcfc_details']->pcfc_amount + $data['pcl_details']->pcl_amount + $data['eefc_details_usd']->eefc_usd_amount + $data['eefc_details_euro']->eefc_euro_amount;
+        $data['currency'] = $this->db->query("select * from currency where currency_id='" . $data['currency_id'] . "'")->row();
+        $data['company_list'] = $this->Voucher_model->get_exporter_list();
+        $data['buyer_order_list'] = $this->Voucher_model->get_buyer_order_list();
+        // var_dump($data);exit;
+        // print_r($data);exit;
+        $this->load->view('voucher/inward_check_list', $data);
+    }
+
+    public function voucher_inward_chk_edit()
+    {
+
+        $this->load->view('voucher/inward_check_list_edit');
+    }
+
+    // public function payouts_add()
+    // {
+    //     $this->load->view('payouts/payouts_add');
+    // }
+    // public function payouts_edit()
+    // {
+    //     $this->load->view('payouts/payouts_edit');
+    // }
+    // public function payouts_view()
+    // {
+    //     $this->load->view('payouts/payouts_view');
+    // }
+    // public function payouts_delete()
+    // {
+    //     $this->load->view('payouts/payouts_delete');
+    // }
+
+
+    public function voucher_add()
+    {
+        $data['company_list'] = $this->Voucher_model->get_exporter_list();
+
+        //$data['ledger_group_list'] = $this->Voucher_model->ledger_group_head_list();
+
+        $this->load->view('voucher/voucher_add', $data);
+    }
+
+    public function get_bank_details_from_comp()
+    {
+        $company_id = $_POST['company_id'];
+        $bank_details_id = $_POST['bank_details_id'];
+
+        $bank_details_company_list = $this->Voucher_model->get_bank_details_from_comp($company_id);
+
+        $option = '<option value="">Select Bank</option>';
+        if (isset($bank_details_company_list)) {
+            foreach ($bank_details_company_list as $list) {
+                $val = "";
+                if ($bank_details_id == $list['bank_detail_id']) {
+                    $val = "selected";
+                }
+                $option .= '<option value="' . $list['bank_detail_id'] . '" ' . $val . ' >' . $list['bank_label'] . '</option>';
+
+            }
+        } else {
+            $option = "<option value=''>Select Bank</option>";
+        }
+        echo $option;
+        // print_r($option);exit;
+        // $this->load->view('ledger_heads/ledger_heads_add',$option);
+    }
+
+    public function get_internal_loan_from_comp()
+    {
+        $company_id = $_POST['company_id'];
+        $internal_loan_id = $_POST['internal_loan_id'];
+
+        $internal_loan_from_comp_list = $this->Voucher_model->get_internal_loan_from_comp($company_id);
+
+        $option = '<option value="">Select Internal Loan</option>';
+        if (isset($internal_loan_from_comp_list)) {
+            foreach ($internal_loan_from_comp_list as $list) {
+                $val = "";
+                if ($internal_loan_id == $list['internal_loan_id']) {
+                    $val = "selected";
+                }
+                $option .= '<option value="' . $list['internal_loan_id'] . '" ' . $val . ' >' . $list['user_il_no'] . '-' . $list['internal_loan_no'] . '</option>';
+
+            }
+        } else {
+            $option = "<option value=''>Select Internal Loan</option>";
+        }
+        echo $option;
+        // print_r($option);exit;
+        // $this->load->view('ledger_heads/ledger_heads_add',$option);
+    }
+
+    public function get_bank_details_from_bnkid()
+    {
+        $bank_details_id = $_POST['bank_details_id'];
+
+        $bank_details_list = $this->Voucher_model->get_bank_detail_by_id($bank_details_id);
+
+        echo $bank_details_list->credit_debit;
+        // print_r($option);exit;
+        // $this->load->view('ledger_heads/ledger_heads_add',$option);
+    }
+
+    public function get_bank_details_from_comp_edit()
+    {
+        $company_id = $_POST['company_id'];
+        $bank_details_id = $_POST['bank_details_id'];
+
+        $bank_details_company_list = $this->Voucher_model->get_bank_details_from_comp($company_id);
+
+        $option = '<option value="">Select Bank</option>';
+        if (isset($bank_details_company_list)) {
+            foreach ($bank_details_company_list as $list) {
+                $val = "";
+                if ($bank_details_id == $list['bank_detail_id']) {
+                    $val = "selected";
+                }
+                $option .= '<option value="' . $list['bank_detail_id'] . '" ' . $val . ' >' . $list['bank_label'] . '</option>';
+
+            }
+        } else {
+            $option = "<option value=''>Select Bank</option>";
+        }
+        echo $option;
+        // print_r($option);exit;
+        // $this->load->view('ledger_heads/ledger_heads_add',$option);
+    }
+
+    public function get_ledger_details_from_comp()
+    {
+        $company_id = $_POST['company_id'];
+        // $bank_details_id=$_POST['bank_details_id'];
+
+        $ledger_group_head_list = $this->Voucher_model->ledger_group_head_list($company_id);
+
+        $option = '<option value="">Choose Ledger Heads</option>';
+        if (isset($ledger_group_head_list)) {
+
+            // print_r($ledger_group_head_list);
+            foreach ($ledger_group_head_list as $i => $val) {
+
+                echo $val;
+
+                $option .= '<optgroup label="' . $val['ledger_group_name'] . '">';
+
+                foreach ($val['ledger_head_list'] as $key => $lt) {
+
+                    $option .= '<option value="' . $lt['ledger_head_id'] . '">' . $lt['ledger_head_name'] . '</option>';
+
+                }
+                $option .= '</optgroup>';
+
+            }
+        } else {
+            $option = "<option value=''>Choose Ledger Heads</option>";
+        }
+
+        echo $option;
+
+    }
+  public function get_ledger_details_from_comp_edit()
+{
+    error_reporting(E_ALL);  
+    	ini_set('display_errors', 1);
+    $company_id = $_POST['company_id'];
+    $ledger_head_id = $_POST['ledger_head_id'];
+
+    $ledger_group_head_list = $this->Voucher_model->ledger_group_head_list($company_id);
+
+    $option = '<option value="">Choose Ledger Heads</option>';
+    
+    if (isset($ledger_group_head_list)) {
+
+        // Loop through the group of ledger heads
+        foreach ($ledger_group_head_list as $i => $val) {
+
+            echo $val;  
+
+            $option .= '<optgroup label="' . $val['ledger_group_name'] . '">';
+
+            // Loop through each ledger head in the group
+            foreach ($val['ledger_head_list'] as $key => $lt) {
+
+                // Reset select to an empty string before checking the condition
+                $select = '';
+
+                // If the current ledger head matches the provided ledger_head_id, mark it as selected
+                if ($ledger_head_id == $lt['ledger_head_id']) {
+                    $select = "selected";
+                }
+
+                // Add the option to the select dropdown
+                $option .= '<option value="' . $lt['ledger_head_id'] . '" ' . $select . '>' . $lt['ledger_head_name'] . '</option>';
+            }
+
+            $option .= '</optgroup>';
+        }
+    } else {
+        $option = "<option value=''>Choose Ledger Heads</option>";
+    }
+
+    // Output the option list
+    echo $option;
+}
+
+
+    public function get_vendor_type_by_dept()
+    {
+        $department_id = $_POST['department_id'];
+
+        $get_vendor_type_by_dept = $this->Voucher_model->get_vendor_type_by_dept($department_id);
+
+        $option = '<option value="">Choose Type</option>';
+        if (isset($get_vendor_type_by_dept)) {
+            foreach ($get_vendor_type_by_dept as $list) {
+                $val = "";
+                $option .= '<option value="' . $list['vendor_type_id'] . '" >' . $list['vendor_type'] . '</option>';
+            }
+        } else {
+            $option = "<option value=''>Choose Type</option>";
+        }
+        echo $option;
+        // print_r($option);exit;
+        // $this->load->view('ledger_heads/ledger_heads_add',$option);
+    }
+
+    public function get_vendor_details_by_type()
+    {
+        $vendor_type_id = $_POST['vendor_type_id'];
+
+        $get_vendor_details_by_type = $this->Voucher_model->get_vendor_details_by_type($vendor_type_id);
+
+        $option = '<option value="">Choose Vendor</option>';
+        if (isset($get_vendor_details_by_type)) {
+            foreach ($get_vendor_details_by_type as $list) {
+                $val = "";
+
+                $option .= '<option value="' . $list['vendor_id'] . '" >' . $list['vendor_name'] . '</option>';
+
+            }
+        } else {
+            $option = "<option value=''>Choose Vendor</option>";
+        }
+        echo $option;
+        // print_r($option);exit;
+        // $this->load->view('ledger_heads/ledger_heads_add',$option);
+    }
+
+    public function get_supplier_po_by_vendor()
+    {
+        $vendor_id = $_POST['vendor_id'];
+
+        $get_supplier_po_by_vendor = $this->Voucher_model->get_supplier_po_by_vendor($vendor_id);
+
+        $option = '<option value="">Choose Suplier PO ID</option>';
+        if (isset($get_supplier_po_by_vendor)) {
+            foreach ($get_supplier_po_by_vendor as $list) {
+                $val = "";
+
+                $option .= '<option value="' . $list['supplier_purchase_order_id'] . '" >' . $list['supplier_purchase_order_no'] . '</option>';
+
+            }
+        } else {
+            $option = "<option value=''>Choose Suuplier PO ID</option>";
+        }
+        echo $option;
+        // print_r($option);exit;
+        // $this->load->view('ledger_heads/ledger_heads_add',$option);
+    }
+
+    public function get_buyer_order_by_sp()
+    {
+        $supplier_po_id = $_POST['supplier_po_id'];
+
+        $get_buyer_order_by_sp = $this->Voucher_model->get_buyer_order_by_sp($supplier_po_id);
+
+        $option = '<option value="">Choose Buyer Order ID</option>';
+        if (isset($get_buyer_order_by_sp)) {
+            foreach ($get_buyer_order_by_sp as $list) {
+                $val = "";
+
+                $option .= '<option value="' . $list['buyer_order_id'] . '" >' . $list['buyer_order_invoice_no'] . '</option>';
+
+                $sp_total_amount = $list['total_amount'];
+                $sp_paid_amount = $list['paid_amount'];
+                $sp_balance_amount = $list['balance_amount'];
+            }
+        } else {
+            $option = "<option value=''>Choose Buyer Order ID</option>";
+        }
+        echo $option . '||' . $sp_total_amount . '||' . $sp_paid_amount . '||' . $sp_balance_amount;
+        // print_r($option);exit;
+        // $this->load->view('ledger_heads/ledger_heads_add',$option);
+    }
+
+    public function get_invoice_details()
+    {
+
+        $buyer_order_id = $_POST['buyer_order_id'];
+
+        $invoice_details = $this->Voucher_model->get_invoice_by_buyer_order_id($buyer_order_id);
+
+        // print_r($invoice_details);exit;
+
+        echo json_encode($invoice_details);
+
+    }
+
+    public function get_delivery_invoice_details()
+    {
+
+        $buyer_order_id = $_POST['buyer_order_id'];
+
+        $delivery_invoice_details = $this->Voucher_model->get_delivery_invoice_by_boid($buyer_order_id);
+
+        $option = '<option value="">Select Delivery Invoice</option>';
+        if (isset($delivery_invoice_details)) {
+            foreach ($delivery_invoice_details as $dilist) {
+
+                $option .= '<option value="' . $dilist['delivery_invoice_id'] . '">' . $dilist['custom_invoice_no'] . '-' . $dilist['delivery_invoice_no'] . '</option>';
+
+            }
+        } else {
+            $option = "<option value=''>Select FD No</option>";
+        }
+
+        echo $option;
+
+    }
+    public function get_fc_details()
+    {
+
+        $fc_id = $_POST['fc_id'];
+
+        $fc_details = $this->Voucher_model->get_fc_details_by_fc_id($fc_id);
+
+        // print_r($fc_details);exit;
+
+        echo json_encode($fc_details);
+
+    }
+    public function get_pcfc_details()
+    {
+
+        $pcfc_id = $_POST['pcfc_id'];
+
+        // print_r($pcfc_id);
+
+        $pcfc_details = $this->Voucher_model->get_pcfc_details_by_pcfc_id($pcfc_id);
+
+        // print_r($pcfc_details);exit;
+
+        echo json_encode($pcfc_details);
+
+    }
+
+    public function get_eefc_details()
+    {
+
+        $eefc_id = $_POST['eefc_id'];
+
+        // print_r($eefc_id);
+
+        $eefc_details = $this->Voucher_model->get_eefc_details_by_eefc_id($eefc_id);
+
+        // print_r($eefc_details);exit;
+
+        echo json_encode($eefc_details);
+
+    }
+    public function get_internal_loan_details()
+    {
+
+        $internal_loan_id = $_POST['internal_loan_id'];
+
+        $internal_loan_details = $this->Voucher_model->get_internalloan_details_by_il_id($internal_loan_id);
+
+        // print_r($internal_loan_details);exit;
+
+        echo json_encode($internal_loan_details);
+
+    }
+
+    public function update_voucher($voucher_id)
+    {
+
+		
+        
+        $voucher_details = $this->db->query("SELECT * FROM `voucher` WHERE voucher_id='" . $voucher_id . "' ")->row();
+
+        $data['voucher_id'] = $voucher_id;
+
+        $data['voucher_no'] = $voucher_details->voucher_no;
+
+        $data['voucher_date'] = date('Y-m-d', strtotime($this->input->post('date')));
+        $data['company_id'] = $this->input->post('company_id');
+        $data['bank_details_id'] = $this->input->post('bank_details_id');
+        $data['ledger_head_id'] = $this->input->post('ledger_head_id');
+        $data['dr_cr'] = $this->input->post('dr_cr');
+        $data['act_pro'] = $this->input->post('act_pro');
+        $data['type_dn_box'] = $this->input->post('type_dn_box');
+        $data['payment_mode'] = $this->input->post('payment_mode');
+        $data['int_type'] = $this->input->post('int_type');
+        $data['buyer_order_id'] = $this->input->post('buyer_order_id');
+        $data['currency_id'] = $this->input->post('currency_id');
+        $data['invoice_id'] = $this->input->post('invoice_id');
+        $data['delivery_invoice_id'] = $this->input->post('delivery_invoice_id');
+        $data['currency_id'] = $this->input->post('currency_id');
+        $data['invoice_id'] = $this->input->post('invoice_id');
+        $data['voucher_amount'] = $this->input->post('buyer_amount');
+        $data['gst_perc'] = $this->input->post('gst_perc');
+        $data['tds_perc'] = $this->input->post('tds_perc');
+        $data['cheque_no'] = $this->input->post('cheque_no');
+        $data['cheque_date'] = date('Y-m-d', strtotime($this->input->post('cheque_date')));
+        $data['description'] = $this->input->post('description');
+        $data['particulars'] = $this->input->post('particulars_desc');
+
+        $data['created_on'] = date('Y-m-d H:i:s');
+
+        $data['created_by'] = $_SESSION['admindata']['user_id'];
+		
+
+		$fc_chk = $this->input->post('fc_chk')??"";
+        $pcfc_chk = $this->input->post('pcfc_chk')??"";
+        $eefc_chk = $this->input->post('eefc_chk')??"";
+        $currt_ac_chk = $this->input->post('currt_ac_chk')??"";
+        $gst_chk = $this->input->post('gst_chk')??"";
+
+        $data['fc_id'] = $this->input->post('fc_id');
+
+        print_r($this->input->post());
+		exit;
+
+ 
+        if ($data['type_dn_box'] == 'buyer') {
+
+            if($fc_chk){
+              $fc_id = $this->input->post('fc_id');
+              $fc_balance = $this->input->post('fc_balance');
+              $fc_amount_usd = $this->input->post('fc_amount_usd');
+              $fc_rate = $this->input->post('fc_rate');
+              $fc_amount_inr = $this->input->post('fc_amount_inr');
+            }else{
+              $fc_id = 0;
+              $fc_balance = 0;
+              $fc_amount_usd = 0;
+              $fc_rate = 0;
+              $fc_amount_inr = 0;
+            }
+
+            if($pcfc_chk){
+                $pcfc_balance = $this->input->post('pcfc_balance');
+                $pcfc_amount_usd = $this->input->post('pcfc_amount_usd');
+                $pcfc_rate = $this->input->post('pcfc_rate');
+                $pcfc_amount_inr = $this->input->post('pcfc_amount_inr');
+            }
+
+
+
+            $data['fc_count'] = $fc_count = $this->input->post('fc_details_append_block_count');
+            $data['pcfc_count'] = $pcfc_count = $this->input->post('pcfc_details_append_block_count');
+
+            // $data['eefc_count'] = $eefc_count = $this->input->post('eefc_details_append_block_count');
+            $data['eefc_count'] = $eefc_count = 0;
+            $data['eefc_count'] = $eefc_count_new=  $this->input->post('eefc_details_append_block_count');
+
+           
+
+            
+
+            $eefc_manual_no = $this->input->post('eefc_manual_no');
+            $final_eefc_bank_id = $this->input->post('final_eefc_bank_id');
+            $final_eefc_currency_id = $this->input->post('final_eefc_currency_id');
+            $eefc_amount_usd = $this->input->post('eefc_amount_usd');
+            $eefc_amount_inr = $this->input->post('eefc_amount_inr');
+			
+            $data['current_amt_usd'] = $this->input->post('current_amt_usd');
+            $data['current_rate'] = $this->input->post('current_rate_usd');
+            $data['current_amt_inr'] = $this->input->post('current_amt_inr');
+			$data['eefc_id']="0";
+            
+
+            $data['voucher_amount_inr'] = $data['current_amt_inr'];
+			if($eefc_chk){
+				$next_eefc = $this->Voucher_model->eefc_next_auto_id();
+				$next_eefc_id=$next_eefc->AUTO_INCREMENT;
+				$data['eefc_id']=$next_eefc_id;
+				for ($j = 0; $j < $eefc_count_new; $j++) {
+					$eefc_manual_no_final = $eefc_manual_no[$j];
+					$final_eefc_bank_id_final = $final_eefc_bank_id[$j];
+					$final_eefc_currency_id_final = $final_eefc_currency_id[$j];
+					$eefc_amount_usd_final = $eefc_amount_usd[$j];
+
+					$company_id = $this->input->post('company_id');
+					$bank_details_id = $data['final_eefc_bank_id'];
+					$ledger_head_id = $this->input->post('ledger_head_id');
+					$payment_mode = $this->input->post('payment_mode');
+					$buyer_id = $this->input->post('buyer_order_id');
+					$eefc_date=date('Y-m-d', strtotime($this->input->post('date')));
+
+					$data_eefc =[
+						'eefc_manual_no'=>$eefc_manual_no_final,
+						'eefc_date'=>$eefc_date,
+						'company_id'=>$company_id,
+						'bank_id'=>$final_eefc_bank_id_final,
+						'currency_id'=>$final_eefc_currency_id_final,
+						'amount'=>$eefc_amount_usd_final,
+						'balance_amount'=>$eefc_amount_usd_final,
+						'created_on'=> date('Y-m-d H:i:s'),
+						'created_by'=> $_SESSION['admindata']['user_id'],
+						'modified_on'=> date('Y-m-d H:i:s'),
+						'modified_by'=> $_SESSION['admindata']['user_id'],
+						'status'=> 0, 
+					];
+					$result_eefc = $this->db->insert('before_eefc',$data_eefc);
+
+				}
+			
+			}
+
+        }
+
+        if ($data['type_dn_box'] == 'vendor') {
+            $data['department_id'] = $this->input->post('department_id');
+            $data['vendor_type_id'] = $this->input->post('vendor_type_id');
+            $data['vendor_id'] = $this->input->post('vendor_id');
+            $supplier_po_idval = $this->input->post('supplier_po_id');
+
+            $data['supplier_po_id'] = isset($supplier_po_idval) ? $supplier_po_idval : "";
+
+            $data['voucher_amount'] = $this->input->post('vendor_amount');
+            $data['voucher_amount_inr'] = $this->input->post('vendor_amount');
+
+        }
+
+        $data['staff_id'] = "";
+
+        if ($data['type_dn_box'] == 'staff') {
+            $data['staff_id'] = $this->input->post('staff_id');
+            $data['voucher_amount'] = $this->input->post('staff_amount');
+            $data['voucher_amount_inr'] = $this->input->post('staff_amount');
+        }
+
+        if ($data['type_dn_box'] == 'others') {
+            $data['others_amount_usd'] = $this->input->post('others_amount_usd');
+            $data['others_amount_rate'] = $this->input->post('others_amount_rate');
+            $data['others_amount_inr'] = $this->input->post('others_amount_inr');
+            $data['voucher_amount'] = $this->input->post('others_amount_inr');
+            $data['voucher_amount_inr'] = $this->input->post('others_amount_inr');
+        }
+
+        if ($data['type_dn_box'] == 'FD Interest') {
+            $data['fd_int'] = $this->input->post('fd_int');
+            if ($data['fd_int'] == 'To Current Acc') {
+                $data['fd_id'] = $this->input->post('tocurrent_fd_id');
+                $data['fd_current_amount'] = $this->input->post('current_acc_amount');
+                $data['voucher_amount'] = $this->input->post('current_acc_amount');
+                $data['voucher_amount_inr'] = $this->input->post('current_acc_amount');
+            } elseif ($data['fd_int'] == 'To FD Acc') {
+                $data['fd_id'] = $this->input->post('fd_id');
+                $data['int_bal'] = 'Interest';
+                $data['fd_acc_amount'] = $this->input->post('fd_acc_amount');
+                $data['voucher_amount'] = $this->input->post('fd_acc_amount');
+                $data['voucher_amount_inr'] = $this->input->post('fd_acc_amount');
+
+                $update_fd = $this->Voucher_model->update_fd_amount($data);
+            }
+        }
+
+        if ($data['type_dn_box'] == 'internal loan') {
+            $data['internal_loan_id'] = $this->input->post('internal_loan_id');
+            $data['internal_loan_interest'] = $this->input->post('check_interest') ??"0";
+
+            $data['voucher_amount'] = $this->input->post('internal_loan_amount');
+            $data['voucher_amount_inr'] = $this->input->post('internal_loan_amount');
+            $data['interest_pcfc_id'] = '';
+        }
+
+        if ($data['fc_id'] != '') {
+            $data['fc_balance_final'] = $data['fc_amount_usd'];
+        }
+        if ($data['pcfc_id'] != '') {
+            $data['pcfc_balance_final'] = $data['pcfc_balance'] - $data['pcfc_amount_usd'];
+        }
+
+        $date = date('d', strtotime($data['voucher_date']));
+        $month = date('m', strtotime($data['voucher_date']));
+        $data['month'] = $month_val = date('M', strtotime($data['voucher_date']));
+        $year = date('Y', strtotime($data['voucher_date']));
+
+        $financial_year_to = ($month > 3) ? $year + 1 : $year;
+        $financial_year_from = $financial_year_to - 1;
+
+        switch ($month_val) {
+            case 'Jan':
+                $data['jan_value'] = $data['voucher_amount'];
+                break;
+            case 'Feb':
+                $data['feb_value'] = $data['voucher_amount'];
+                break;
+            case 'Mar':
+                $data['mar_value'] = $data['voucher_amount'];
+                break;
+            case 'Apr':
+                $data['apr_value'] = $data['voucher_amount'];
+                break;
+            case 'May':
+                $data['may_value'] = $data['voucher_amount'];
+                break;
+            case 'Jun':
+                $data['jun_value'] = $data['voucher_amount'];
+                break;
+            case 'Jul':
+                $data['jul_value'] = $data['voucher_amount'];
+                break;
+            case 'Aug':
+                $data['aug_value'] = $data['voucher_amount'];
+                break;
+            case 'Sept':
+                $data['sept_value'] = $data['voucher_amount'];
+                break;
+            case 'Oct':
+                $data['oct_value'] = $data['voucher_amount'];
+                break;
+            case 'Nov':
+                $data['nov_value'] = $data['voucher_amount'];
+                break;
+            case 'Dec':
+                $data['dec_value'] = $data['voucher_amount'];
+                break;
+
+        }
+
+        $data['year'] = $financial_year_from . '-' . $financial_year_to;
+
+        $ledger_group = $this->Voucher_model->get_ledger_group_by_head_id($data['ledger_head_id']);
+
+        $data['ledger_group_id'] = $ledger_group->ledger_group_id;
+
+        $get_monthly_ledger_details = $this->Voucher_model->get_monthly_ledger_details($data);
+
+        $get_yearly_turnover_details = $this->Voucher_model->get_yearly_turnover_details($data);
+
+        if (count($get_monthly_ledger_details) > 0) {
+        } else {
+        }
+        $data['credit_amount'] = 0;
+        $data['debit_amount'] = 0;
+
+        if ($data['dr_cr'] == 'credit') {
+            $data['credit_amount'] = $data['voucher_amount'];
+        } else {
+            $data['debit_amount'] = $data['voucher_amount'];
+        }
+
+        $data['closing_balance'] = $data['credit_amount'] - $data['debit_amount'];
+
+        if (count($get_yearly_turnover_details) > 0) {
+
+        } else {
+
+        }
+
+
+        $result = $this->Voucher_model->create_voucher($data);
+
+        $voucher = $this->Voucher_model->get_voucher_details();
+
+        $data['voucher_id'] = $voucher->voucher_id;
+
+       
+
+        if ($data['delivery_invoice_id'] != '') {
+            $di_update = $this->db->query("UPDATE voucher set delivery_invoice_id='" . $data['delivery_invoice_id'] . "' where voucher_id='" . $data['voucher_id'] . "'");
+        }
+		
+        if ($data['type_dn_box'] == 'buyer') {
+
+            for ($i = 0; $i < $fc_count; $i++) {
+                $data['fc_id'] = $fc_id[$i];
+                $data['fc_balance'] = $fc_balance[$i];
+                $data['fc_amount_usd'] = $fc_amount_usd[$i];
+                $data['fc_rate'] = $fc_rate[$i];
+                $data['fc_amount_inr'] = $fc_amount_inr[$i];
+
+                $total_fc_amount += $data['fc_amount_usd'];
+                $total_fc_amount_inr += $data['fc_amount_inr'];
+
+                if ($data['delivery_invoice_id'] != '') {
+                    $di_update = $this->db->query("UPDATE voucher set delivery_invoice_id='" . $data['delivery_invoice_id'] . "' where voucher_id='" . $data['voucher_id'] . "'");
+                }
+
+                $insert_fc = $this->Voucher_model->insert_fc_details($data);
+            }
+
+            $pcfc_id = $this->input->post('final_pcfc_id');
+
+            for ($j = 0; $j < $pcfc_count; $j++) {
+                $data['pcfc_id'] = $pcfc_id[$j];
+                $data['pcfc_balance'] = $pcfc_balance[$j];
+                $data['pcfc_amount_usd'] = $pcfc_amount_usd[$j];
+                $data['pcfc_rate'] = $pcfc_rate[$j];
+                $data['pcfc_amount_inr'] = $pcfc_amount_inr[$j];
+
+                $total_pcfc_amount += $data['pcfc_amount_usd'];
+
+                $total_pcfc_amount_inr += $data['pcfc_amount_inr'];
+
+                // print_r($data);
+
+                $insert_pcfc = $this->Voucher_model->insert_pcfc_details($data);
+
+            }  
+				
+
+
+            $data['total_fc_amount_inr'] = $total_fc_amount_inr;
+            $data['total_pcfc_amount_inr'] = $total_pcfc_amount_inr;
+
+            $data['total_fc_amount'] = $total_fc_amount;
+            $data['total_pcfc_amount'] = $total_pcfc_amount;
+			
+            if ($total_fc_amount_inr > 0 || $data['current_amt_inr'] > 0 || $total_pcfc_amount_inr > 0 ) {
+                $data['total_voucher_amount_inr'] = $data['current_amt_inr'];
+
+                $data['total_voucher_amount'] =  $data['voucher_amount'];
+
+                // $data['total_non_actual_amount_inr'] = $total_pcfc_amount_inr + $total_eefc_amount_inr;
+                $data['total_non_actual_amount_inr'] = $total_pcfc_amount_inr ;
+
+            } elseif ($total_fc_amount_inr == 0 && $data['current_amt_inr'] == 0 && $total_pcfc_amount_inr == 0 ) {
+                $data['total_voucher_amount_inr'] = $data['voucher_amount'];
+                $data['total_voucher_amount'] = $data['voucher_amount'];
+            }
+
+            //print_r($data);exit;
+
+            $data['modified_by'] = $_SESSION['admindata']['user_id'];
+            $data['modified_on'] = date('Y-m-d H:i:s');
+
+            $update_voucher = $this->Voucher_model->update_voucher_details($data);
+
+        }
+
+        if ($data['type_dn_box'] == 'Deposit') {
+            $data['insurance_id'] = $this->input->post('insurance_id');
+            $data['deposit_amount'] = $this->input->post('deposit_amount');
+
+            $data['total_voucher_amount'] = $this->input->post('deposit_amount');
+            $data['total_voucher_amount_inr'] = $this->input->post('deposit_amount');
+
+            $insert_deposit = $this->db->query("INSERT INTO insurance_deposit_history(voucher_id,insurance_id,deposit_amount) VALUES('" . $data['voucher_id'] . "','" . $data['insurance_id'] . "','" . $data['deposit_amount'] . "')");
+
+            $update_voucher1 = $this->db->query("UPDATE voucher set insurance_id='" . $data['insurance_id'] . "',deposit_amount='" . $data['deposit_amount'] . "',total_voucher_amount='" . $data['total_voucher_amount'] . "',total_voucher_amount_inr='" . $data['total_voucher_amount_inr'] . "' where voucher_id='" . $data['voucher_id'] . "'");
+        }
+
+
+
+        $dataVoucher=[
+            'voucher_date'=>  $data['voucher_date'],
+            'company_id'=> $data['company_id'],
+            'bank_details_id'=> $data['bank_details_id'],
+            'ledger_head_id'=> $data['ledger_head_id'] ,
+            'debit_credit'=> $data['dr_cr'],
+            'actual_projection'=> $data['act_pro'],
+            'voucher_type'=> $data['type_dn_box'],
+            'payment_mode'=> $data['payment_mode'],
+            'buyer_id'=> $data['buyer_order_id'],
+            'invoice_id'=> $data['invoice_id'],
+            'delivery_invoice_id'=> $data['delivery_invoice_id'],
+            'currency_id'=> $data['currency_id'],
+            'fc_id'=> $data['delivery_invoice_id'],
+            'fc_amount_usd'=> $data['delivery_invoice_id'],
+            'fc_conv_rate'=> $data['delivery_invoice_id'],
+            'pcfc_conv_rate'=> $data['delivery_invoice_id'],
+            'tocurrent_conv_rate'=> $data['delivery_invoice_id'],
+            'fc_amount_inr'=> $data['delivery_invoice_id'],
+            'pcfc_id'=> $data['delivery_invoice_id'],
+            'pcfc_amount_usd'=> $data['delivery_invoice_id'],
+            'pcfc_amount_inr'=> $data['delivery_invoice_id'],
+            'tocurrent_amount_usd'=> $data['delivery_invoice_id'],
+            'tocurrent_amount_inr'=> $data['delivery_invoice_id'],
+            'others_amount_usd'=> $data['delivery_invoice_id'],
+            'others_amount_rate'=> $data['delivery_invoice_id'],
+            'others_amount_inr'=> $data['delivery_invoice_id'],
+            'gst_percentage'=> $data['gst_perc'],
+            'tds_percentage'=> $data['tds_perc'],
+            'cheque_no'=> $data['cheque_no'],
+            'cheque_date'=> $data['cheque_date'],
+            'dept_id'=> $data['delivery_invoice_id'],
+            'vendor_type_id'=> $data['delivery_invoice_id'],
+            'vendor_id'=> $data['delivery_invoice_id'],
+            'supplier_po_id'=> $data['delivery_invoice_id'],
+            'staff_id'=> $data['delivery_invoice_id'],
+            'interest_type'=> $data['delivery_invoice_id'],
+            'internal_loan_id'=> $data['delivery_invoice_id'],
+            'internal_loan_interest'=> $data['delivery_invoice_id'],
+            'interest_pcfc_id'=> $data['delivery_invoice_id'],
+            'fd_int'=> $data['delivery_invoice_id'],
+            'fd_current_amount'=> $data['delivery_invoice_id'],
+            'fd_id'=> $data['delivery_invoice_id'],
+            'eefc_id'=> $data['delivery_invoice_id'],
+            'int_bal'=> $data['delivery_invoice_id'],
+            'fd_acc_amount'=> $data['delivery_invoice_id'],
+            'insurance_id'=> $data['delivery_invoice_id'],
+            'deposit_amount'=> $data['delivery_invoice_id'],
+            'total_voucher_amount'=> $data['delivery_invoice_id'],
+            'total_voucher_amount_inr'=> $data['delivery_invoice_id'],
+            'total_non_actual_amount_inr'=> $data['delivery_invoice_id'],
+            'description'=> $data['description'],
+            'particulars'=> $data['particulars'],
+            'modified_on'=> $data['created_on'],
+            'modified_by'=> $data['created_by'],
+        ];
+
+        
+        $this->db->where('voucher_id', $voucher_id);
+        $result=$this->db->update('voucher', $dataVoucher);
+
+
+        // $result = $this->Voucher_model->update_voucher($data);
+        // print_r($result);exit;
+        if ($result) {
+            $this->session->set_flashdata('voucher_success', 'voucher has been Updated successfully.');
+        } else {
+            $this->session->set_flashdata('voucher_err', 'Something went wrong');
+        }
+        redirect('/Reports/bank_statement_sheet');
+    }
+
+    public function get_fd_details_by_comp_bank()
+    {
+        $company_id = $_POST['company_id'];
+        $bank_id = $_POST['bank_id'];
+
+        $fd_id = $_POST['fd_id'];
+
+        $fd_details = $this->Voucher_model->get_fd_details_by_comp_bank($company_id, $bank_id);
+
+        $option = '<option value="">Select FD No</option>';
+        if (isset($fd_details)) {
+            foreach ($fd_details as $fdlist) {
+                $val = "";
+                if ($fd_id == $fdlist['fixed_deposit_id']) {
+                    $val = "selected";
+                }
+                $option .= '<option value="' . $fdlist['fixed_deposit_id'] . '" ' . $val . ' >' . $fdlist['user_fd_no'] . '-' . $fdlist['fixed_deposit_no'] . '-' . $fdlist['fd_balance'] . '</option>';
+
+            }
+        } else {
+            $option = "<option value=''>Select FD No</option>";
+        }
+
+        echo $option;
+
+    }
+
+    public function get_insurance_details_by_cmp()
+    {
+        $company_id = $_POST['company_id'];
+
+        $ins_id = $_POST['ins_id'];
+
+        $ins_details = $this->Voucher_model->get_insurance_details_by_cmp($company_id);
+
+        $insurance_op = '<option value="">Select Insurance</option>';
+        if (isset($ins_details)) {
+            foreach ($ins_details as $inslist) {
+                $val = "";
+                if ($fd_id == $inslist['insurance_id']) {
+                    $val = "selected";
+                }
+                $insurance_op .= '<option value="' . $inslist['insurance_id'] . '" ' . $val . ' >' . $inslist['user_insurance_no'] . '-' . $inslist['insurance_no'] . '</option>';
+
+            }
+        } else {
+            $insurance_op = "<option value=''>Select Insurance</option>";
+        }
+
+        echo $insurance_op;
+
+    }
+    public function inward_remittance_save()
+    {
+        $company_id = $this->input->post('company_id');
+        // print_r($company_id);exit;
+        $date = $this->input->post('date');
+        $bo_id = $this->input->post('buyer_order_id');
+        $act_pro = $this->input->post('act_pro');
+
+        $user_id = $_SESSION['admindata']['user_id'];
+        $wd_user_id = $_SESSION['admindata']['user_id'];
+        $created_by = $_SESSION['admindata']['user_id'];
+
+        $login_user_id = [];
+        $login_user_id[] = $_SESSION['admindata']['user_id'];
+
+        $wd_yes_no_1 = $this->input->post('wd_yes_no_1');
+        $yes_no_2 = $this->input->post('yes_no_2');
+        $wd_yes_no_2 = $this->input->post('wd_yes_no_2');
+        $yes_no_3 = $this->input->post('yes_no_3');
+        $wd_yes_no_3 = $this->input->post('wd_yes_no_3');
+        $yes_no_4 = $this->input->post('yes_no_4');
+        $yes_no_5 = $this->input->post('yes_no_5');
+        $yes_no_6 = $this->input->post('yes_no_6');
+        $yes_no_7 = $this->input->post('yes_no_7');
+        $wd_yes_no_8 = $this->input->post('wd_yes_no_8');
+        $wd_yes_no_9 = $this->input->post('wd_yes_no_9');
+        $wd_yes_no_10 = $this->input->post('wd_yes_no_10');
+        $wd_yes_no_11 = $this->input->post('wd_yes_no_11');
+        $wd_yes_no_12 = $this->input->post('wd_yes_no_12');
+        $wd_yes_no_13 = $this->input->post('wd_yes_no_13');
+        $wd_yes_no_14 = $this->input->post('wd_yes_no_14');
+        $wd_yes_no_15 = $this->input->post('wd_yes_no_15');
+        $wd_yes_no_16 = $this->input->post('wd_yes_no_16');
+        $wd_yes_no_17 = $this->input->post('wd_yes_no_17');
+        $wd_yes_no_18 = $this->input->post('wd_yes_no_18');
+        $wd_yes_no_19 = $this->input->post('wd_yes_no_19');
+
+        $field_options1 = [];
+        $field_options2 = [];
+        $field_options3 = [];
+        $field_options4 = [];
+        $field_options5 = [];
+        $field_options6 = [];
+        $field_options7 = [];
+        $field_options8 = [];
+        $field_options9 = [];
+        $field_options10 = [];
+        $field_options11 = [];
+        $field_options12 = [];
+        $field_options13 = [];
+        $field_options14 = [];
+        $field_options15 = [];
+        $field_options16 = [];
+        $field_options17 = [];
+        $field_options18 = [];
+        $field_options19 = [];
+        $field_options20 = [];
+        $field_options21 = [];
+
+        $field_options1[] = ['user_id' => $user_id, 'value' => $wd_yes_no_1];
+        $field_options2[] = ['user_id' => $user_id, 'value' => $yes_no_2];
+        $field_options3[] = ['user_id' => $user_id, 'value' => $wd_yes_no_2];
+        $field_options4[] = ['user_id' => $user_id, 'value' => $yes_no_3];
+        $field_options5[] = ['user_id' => $user_id, 'value' => $wd_yes_no_3];
+        $field_options6[] = ['user_id' => $user_id, 'value' => $yes_no_4];
+        $field_options7[] = ['user_id' => $user_id, 'value' => $yes_no_5];
+        $field_options8[] = ['user_id' => $user_id, 'value' => $yes_no_6];
+        $field_options9[] = ['user_id' => $user_id, 'value' => $yes_no_7];
+        $field_options10[] = ['user_id' => $user_id, 'value' => $wd_yes_no_8];
+        $field_options11[] = ['user_id' => $user_id, 'value' => $wd_yes_no_9];
+        $field_options12[] = ['user_id' => $user_id, 'value' => $wd_yes_no_10];
+        $field_options13[] = ['user_id' => $user_id, 'value' => $wd_yes_no_11];
+        $field_options14[] = ['user_id' => $user_id, 'value' => $wd_yes_no_12];
+        $field_options15[] = ['user_id' => $user_id, 'value' => $wd_yes_no_13];
+        $field_options16[] = ['user_id' => $user_id, 'value' => $wd_yes_no_14];
+        $field_options17[] = ['user_id' => $user_id, 'value' => $wd_yes_no_15];
+        $field_options18[] = ['user_id' => $user_id, 'value' => $wd_yes_no_16];
+        $field_options19[] = ['user_id' => $user_id, 'value' => $wd_yes_no_17];
+        $field_options20[] = ['user_id' => $user_id, 'value' => $wd_yes_no_18];
+        $field_options21[] = ['user_id' => $user_id, 'value' => $wd_yes_no_19];
+
+        $select = $this->db->query("SELECT * FROM inward_remittance where buyer_order_id='" . $bo_id . "' and company_id='" . $company_id . "' and act_pro='" . $act_pro . "'")->row();
+
+        if ($select) {
+            $login_user_dcode = json_decode($select->login_user_id);
+            // if (is_array($login_user_dcode) && in_array($user_id, $login_user_dcode)) {
+            //     $query = "SELECT * FROM inward_remittance WHERE buyer_order_id='".$bo_id."' AND act_pro='".$act_pro."' AND company_id='".$company_id."'";
+            //         $existing_data_query = $this->db->query($query);
+            //         $existing_data = $existing_data_query->row(); // Assuming you fetch one row
+
+            //         // Update specific user's data in each field
+            //         $data_fields = ['data1', 'data2','data3', 'data4','data5', 'data6','data7', 'data8','data9', 'data10','data11', 'data12','data13', 'data14','data15', 'data16','data17', 'data18','data19', 'data20','data21']; // Add other fields as needed
+
+            //         foreach ($data_fields as $field) {
+            //             $data = json_decode($existing_data->$field, true);
+
+            //             foreach ($data as &$item) {
+
+            //                 if ($item['user_id'] == $user_id) {
+            //                     $wd_yes_no_fields = [
+            //                         'wd_yes_no_1', 'wd_yes_no_2', 'wd_yes_no_3', 'wd_yes_no_4', 'wd_yes_no_5',
+            //                         'wd_yes_no_6', 'wd_yes_no_7', 'wd_yes_no_8', 'wd_yes_no_9', 'wd_yes_no_10',
+            //                         'wd_yes_no_11', 'wd_yes_no_12', 'wd_yes_no_13', 'wd_yes_no_14', 'wd_yes_no_15',
+            //                         'wd_yes_no_16', 'wd_yes_no_17', 'wd_yes_no_18', 'wd_yes_no_19'
+            //                     ];
+            //                     // print_r( $user_id);
+            //                     foreach ($wd_yes_no_fields as $field) {
+
+            //                         $new_value_for_user_id = $this->input->post($field);
+            //                         $item['value'] = $new_value_for_user_id;
+            //                         print_r($item['value']);
+            //                         // break;
+            //                         ${'updated_'.$field} = $data;
+            //                     // print_r('updated_'.$field);
+            //                     // print_r($data);
+            //                         // print_r($new_value_for_user_id);
+            //                     }
+
+            //                      // Assuming each user_id is unique in $field
+            //                 }
+            //             }
+
+            //             // print_r(${'updated_'.$field});
+            //         }
+            //     // echo "User ID $user_id exists in login_user_id array.";
+            //     $result=$this->db->query("UPDATE inward_remittance SET date='".$date."',act_pro='".$act_pro."',data1='".${'updated_data1'}."',data2='".${'updated_data2'}."',data3='".${'updated_data3'}."',data4='".${'updated_data4'}."',data5='".${'updated_data5'}."' where buyer_order_id='".$bo_id."' and act_pro='".$act_pro."' and company_id='".$company_id."'");
+            //     // Your further logic here
+            // }
+            if (is_array($login_user_dcode) && in_array($user_id, $login_user_dcode)) {
+                // Fetch existing data based on conditions
+                $query = "SELECT * FROM inward_remittance WHERE buyer_order_id='" . $bo_id . "' AND act_pro='" . $act_pro . "' AND company_id='" . $company_id . "'";
+                $existing_data_query = $this->db->query($query);
+                $existing_data = $existing_data_query->row(); // Assuming you fetch one row
+
+                // Update specific user's data in each field
+                // $data_fields = ['data1', 'data2', 'data3', 'data4', 'data5', 'data6', 'data7', 'data8', 'data9', 'data10',
+                //                 'data11', 'data12', 'data13', 'data14', 'data15', 'data16', 'data17', 'data18', 'data19', 'data20', 'data21'];
+                //     $wd_yes_no_fields = [
+                //         'wd_yes_no_1', 'yes_no_2', 'wd_yes_no_2', 'yes_no_3', 'wd_yes_no_3',
+                //         'yes_no_4', 'yes_no_5', 'yes_no_6', 'yes_no_7', 'wd_yes_no_8',
+                //         'wd_yes_no_9', 'wd_yes_no_10', 'wd_yes_no_11', 'wd_yes_no_12',
+                //         'wd_yes_no_13', 'wd_yes_no_14', 'wd_yes_no_15', 'wd_yes_no_16',
+                //         'wd_yes_no_17', 'wd_yes_no_18', 'wd_yes_no_19'
+                //     ];
+
+                // $num_fields = count($wd_yes_no_fields);
+                // $num_columns = 21;
+
+                // for ($i = 1; $i <= $num_columns; $i++) {
+                //     $field = 'data' . $i;
+                //     // Decode the JSON data for the current field
+                //     $data = json_decode($existing_data->$field, true);
+
+                //     foreach ($data as &$item) {
+                //         if ($item['user_id'] == $user_id) {
+                //             // $wd_yes_no_fields = [
+                //             //     'wd_yes_no_1','yes_no_2', 'wd_yes_no_2','yes_no_3', 'wd_yes_no_3','yes_no_4','yes_no_5','yes_no_6','yes_no_7', 'wd_yes_no_8', 'wd_yes_no_9', 'wd_yes_no_10',
+                //             //     'wd_yes_no_11', 'wd_yes_no_12', 'wd_yes_no_13', 'wd_yes_no_14', 'wd_yes_no_15',
+                //             //     'wd_yes_no_16', 'wd_yes_no_17', 'wd_yes_no_18', 'wd_yes_no_19'
+                //             // ];
+                //             // print_r($item['user_id'].','.$user_id.';');
+                //             foreach ($wd_yes_no_fields as $wd_field) {
+                //                 // Fetch value from POST data for each $wd_field
+                //                 $new_value_for_user_id = $this->input->post($wd_field);
+
+                //                 // Update the specific item's value if it exists
+
+                //                 if (isset($new_value_for_user_id)) {
+                //                     $item['value'] = $new_value_for_user_id;
+                //                     break; // Exit the loop once the value is updated
+                //                 }
+                //                 //break;
+                //                 // print_r($data);
+                //             }
+
+                //         }
+                //     //    break;
+                //     }
+                //     // print_r($data);
+                //     // Encode back to JSON after updates
+                //     $updated_data = json_encode($data);
+                //     // print_r($updated_data);
+                //     ${'updated_'.$field} = $updated_data; // Variable variable to store updated data
+                // }
+
+                $data_fields = ['data1', 'data2', 'data3', 'data4', 'data5', 'data6', 'data7', 'data8', 'data9', 'data10',
+                    'data11', 'data12', 'data13', 'data14', 'data15', 'data16', 'data17', 'data18', 'data19', 'data20', 'data21'];
+                $wd_yes_no_fields = [
+                    'wd_yes_no_1', 'yes_no_2', 'wd_yes_no_2', 'yes_no_3', 'wd_yes_no_3',
+                    'yes_no_4', 'yes_no_5', 'yes_no_6', 'yes_no_7', 'wd_yes_no_8',
+                    'wd_yes_no_9', 'wd_yes_no_10', 'wd_yes_no_11', 'wd_yes_no_12',
+                    'wd_yes_no_13', 'wd_yes_no_14', 'wd_yes_no_15', 'wd_yes_no_16',
+                    'wd_yes_no_17', 'wd_yes_no_18', 'wd_yes_no_19',
+                ];
+
+                $num_columns = count($data_fields);
+
+                for ($i = 0; $i < $num_columns; $i++) {
+                    $data_field = $data_fields[$i];
+                    $wd_yes_no_field = $wd_yes_no_fields[$i];
+
+                    // Decode the JSON data for the current field
+                    $data = json_decode($existing_data->$data_field, true);
+
+                    foreach ($data as &$item) {
+                        if ($item['user_id'] == $user_id) {
+                            // Fetch value from POST data for $wd_yes_no_field
+                            $new_value_for_user_id = $this->input->post($wd_yes_no_field);
+
+                            // Update the specific item's value if it exists
+                            if (isset($new_value_for_user_id)) {
+                                $item['value'] = $new_value_for_user_id;
+                                break; // Exit the loop once the value is updated
+                            }
+                        }
+                    }
+
+                    // Encode back to JSON after updates
+                    $updated_data = json_encode($data);
+                    ${'updated_' . $data_field} = $updated_data; // Variable variable to store updated data
+                }
+
+		// Now you have $updated_data1, $updated_data2, ..., $updated_data21 with updated JSON data.
+
+                // Construct and execute the update query
+                $update_query = "UPDATE inward_remittance SET ";
+                for ($i = 1; $i <= $num_columns; $i++) {
+                    $field = 'data' . $i;
+                    // Use ${'updated_'.$field} which holds updated data from payload
+                    $update_query .= "$field='" . ${'updated_' . $field} . "', ";
+                }
+                $update_query = rtrim($update_query, ', ') . " WHERE buyer_order_id='" . $bo_id . "' AND act_pro='" . $act_pro . "' AND company_id='" . $company_id . "'";
+
+                // print_r($update_query);
+                // Perform the update
+                $result = $this->db->query($update_query);
+
+                // Optionally return or echo success message
+                
+            } else {
+                echo "User ID $user_id does not exist in login_user_id array.";
+
+                // Fetch existing data for buyer_order_id, act_pro, company_id
+                $existing_data_query = $this->db->query("SELECT * FROM inward_remittance WHERE buyer_order_id='" . $bo_id . "' AND act_pro='" . $act_pro . "' AND company_id='" . $company_id . "'");
+                $existing_data = $existing_data_query->row();
+
+                // print_r($field_options1);exit;
+                $merged_data1 = json_decode($existing_data->data1, true);
+                $merged_data1[] = ['user_id' => $user_id, 'value' => $wd_yes_no_1];
+                $merged_data2 = json_decode($existing_data->data2, true);
+                $merged_data2[] = ['user_id' => $user_id, 'value' => $yes_no_2];
+                $merged_data3 = json_decode($existing_data->data3, true);
+                $merged_data3[] = ['user_id' => $user_id, 'value' => $wd_yes_no_2];
+                $merged_data4 = json_decode($existing_data->data4, true);
+                $merged_data4[] = ['user_id' => $user_id, 'value' => $yes_no_3];
+                $merged_data5 = json_decode($existing_data->data5, true);
+                $merged_data5[] = ['user_id' => $user_id, 'value' => $wd_yes_no_3];
+                $merged_data6 = json_decode($existing_data->data6, true);
+                $merged_data6[] = ['user_id' => $user_id, 'value' => $yes_no_4];
+                $merged_data7 = json_decode($existing_data->data7, true);
+                $merged_data7[] = ['user_id' => $user_id, 'value' => $yes_no_5];
+                $merged_data8 = json_decode($existing_data->data8, true);
+                $merged_data8[] = ['user_id' => $user_id, 'value' => $yes_no_6];
+                $merged_data9 = json_decode($existing_data->data9, true);
+                $merged_data9[] = ['user_id' => $user_id, 'value' => $yes_no_7];
+                $merged_data10 = json_decode($existing_data->data10, true);
+                $merged_data10[] = ['user_id' => $user_id, 'value' => $wd_yes_no_8];
+                $merged_data11 = json_decode($existing_data->data11, true);
+                $merged_data11[] = ['user_id' => $user_id, 'value' => $wd_yes_no_9];
+                $merged_data12 = json_decode($existing_data->data12, true);
+                $merged_data12[] = ['user_id' => $user_id, 'value' => $wd_yes_no_10];
+                $merged_data13 = json_decode($existing_data->data13, true);
+                $merged_data13[] = ['user_id' => $user_id, 'value' => $wd_yes_no_11];
+                $merged_data14 = json_decode($existing_data->data14, true);
+                $merged_data14[] = ['user_id' => $user_id, 'value' => $wd_yes_no_12];
+                $merged_data15 = json_decode($existing_data->data15, true);
+                $merged_data15[] = ['user_id' => $user_id, 'value' => $wd_yes_no_13];
+                $merged_data16 = json_decode($existing_data->data16, true);
+                $merged_data16[] = ['user_id' => $user_id, 'value' => $wd_yes_no_14];
+                $merged_data17 = json_decode($existing_data->data17, true);
+                $merged_data17[] = ['user_id' => $user_id, 'value' => $wd_yes_no_15];
+                $merged_data18 = json_decode($existing_data->data18, true);
+                $merged_data18[] = ['user_id' => $user_id, 'value' => $wd_yes_no_16];
+                $merged_data19 = json_decode($existing_data->data19, true);
+                $merged_data19[] = ['user_id' => $user_id, 'value' => $wd_yes_no_17];
+                $merged_data20 = json_decode($existing_data->data20, true);
+                $merged_data20[] = ['user_id' => $user_id, 'value' => $wd_yes_no_18];
+                $merged_data21 = json_decode($existing_data->data21, true);
+                $merged_data21[] = ['user_id' => $user_id, 'value' => $wd_yes_no_19];
+
+                $user_id_merged = json_decode($existing_data->login_user_id, true);
+                $user_id_merged[] = $_SESSION['admindata']['user_id'];
+
+                $update_query = "UPDATE inward_remittance SET date='" . $date . "', act_pro='" . $act_pro . "',data1='" . json_encode($merged_data1) . "',data2='" . json_encode($merged_data2) . "',data3='" . json_encode($merged_data3) . "',data4='" . json_encode($merged_data4) . "',data5='" . json_encode($merged_data5) . "',data6='" . json_encode($merged_data6) . "',data7='" . json_encode($merged_data7) . "',data8='" . json_encode($merged_data8) . "',data9='" . json_encode($merged_data9) . "',data10='" . json_encode($merged_data10) . "',data11='" . json_encode($merged_data11) . "',data12='" . json_encode($merged_data12) . "',data13='" . json_encode($merged_data13) . "',data14='" . json_encode($merged_data14) . "',data15='" . json_encode($merged_data15) . "',data16='" . json_encode($merged_data16) . "',data17='" . json_encode($merged_data17) . "',data18='" . json_encode($merged_data18) . "',data19='" . json_encode($merged_data19) . "',data20='" . json_encode($merged_data20) . "',data21='" . json_encode($merged_data21) . "',login_user_id='" . json_encode($user_id_merged) . "' WHERE buyer_order_id='" . $bo_id . "' AND act_pro='" . $act_pro . "' AND company_id='" . $company_id . "'";
+
+                $result = $this->db->query($update_query);
+
+            }
+        	} else {
+
+            // $field_options_json = array();
+            // for ($i = 0; $i < 21; $i++) {
+            //     if (isset($field_options[$i])) {
+            //         $field_options_json[] = json_encode($field_options[$i]);
+            //     } else {
+            //         $field_options_json[] = null; // Ensure all 21 options are accounted for
+            //     }
+            // }
+
+            $result = $this->db->query("INSERT INTO inward_remittance(company_id,date,buyer_order_id,act_pro,data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,data16,data17,data18,data19,data20,data21,login_user_id,workdone_details,created_by)
+			VALUES('" . $company_id . "','" . $date . "','" . $bo_id . "','" . $act_pro . "','" . json_encode($field_options1) . "','" . json_encode($field_options2) . "','" . json_encode($field_options3) . "','" . json_encode($field_options4) . "','" . json_encode($field_options5) . "','" . json_encode($field_options6) . "','" . json_encode($field_options7) . "','" . json_encode($field_options8) . "','" . json_encode($field_options9) . "','" . json_encode($field_options10) . "','" . json_encode($field_options11) . "','" . json_encode($field_options12) . "','" . json_encode($field_options13) . "','" . json_encode($field_options14) . "','" . json_encode($field_options15) . "','" . json_encode($field_options16) . "','" . json_encode($field_options17) . "','" . json_encode($field_options18) . "','" . json_encode($field_options19) . "','" . json_encode($field_options20) . "','" . json_encode($field_options21) . "','" . json_encode($login_user_id) . "','" . $wd_user_id . "','" . $created_by . "')");
+
+        }
+
+        //print_r($field_options21);exit;
+        // $select=$this->db->query("SELECT * FROM inward_remittance WHERE buyer_order_id='".$bo_id."' AND company_id='".$company_id."' ")->row();
+
+        // if($select){
+        //     $result=$this->db->query("UPDATE inward_remittance SET date='".$date."',act_pro='".$act_pro."',data1='".$wd_yes_no_1."',data2='".$yes_no_2."',data3='".$wd_yes_no_2."',data4='".$yes_no_3."',data5='".$wd_yes_no_3."',data6='".$yes_no_4."',data7='".$yes_no_5."',data8='".$yes_no_6."',data9='".$yes_no_7."',data10='".$wd_yes_no_8."',data11='".$wd_yes_no_9."',data12='".$wd_yes_no_10."',data13='".$wd_yes_no_11."',data14='".$wd_yes_no_12."',data15='".$wd_yes_no_13."',data16='".$wd_yes_no_14."',data17='".$wd_yes_no_15."',data18='".$wd_yes_no_16."',data19='".$wd_yes_no_17."',data20='".$wd_yes_no_18."',data21='".$wd_yes_no_19."',login_user_id='".$user_id."',workdone_details='".$wd_user_id."',created_by='".$created_by."'");
+        // }
+        if ($result) {
+            echo 1;
+        } else {
+            echo 0;
+        }
+
+    }
+
+    public function inward_remittance_update()
+    {
+        $company_id = $this->input->post('company_id');
+
+  
+        // print_r($company_id);exit;
+        $date = $this->input->post('date');
+        $bo_id = $this->input->post('buyer_order_id');
+        $act_pro = $this->input->post('act_pro');
+
+        $user_id = $_SESSION['admindata']['user_id'];
+        $wd_user_id = $_SESSION['admindata']['user_id'];
+        $created_by = $_SESSION['admindata']['user_id'];
+
+    
+        $login_user_id = $_SESSION['admindata']['user_id'];
+       
+        $login_details=$this->db->query("SELECT * FROM users u,department d,roles r where u.department_id=d.department_id and d.department='Accounts' and u.role_id=r.role_id and user_id='".$login_user_id."'")->row();
+       
+        $user_role = str_replace("Accounts ", "", $login_details->role_name);
+    
+        $field_options1 = [];
+        $field_options2 = [];
+        $field_options3 = [];
+        $field_options4 = [];
+        $field_options5 = [];
+        $field_options6 = [];
+        $field_options7 = [];
+        $field_options8 = [];
+        $field_options9 = [];
+        $field_options10 = [];
+        $field_options11 = [];
+        $field_options12 = [];
+        $field_options13 = [];
+        $field_options14 = [];
+        $field_options15 = [];
+        $field_options16 = [];
+        $field_options17 = [];
+        $field_options18 = [];
+        $field_options19 = [];
+        $field_options20 = [];
+        $field_options21 = [];
+
+        // print_r($user_role);exit;
+        if ($user_role == 'Manager') {
+            for ($i = 0; $i <= 21; $i++) {
+                ${'wd_yes_no_' . $i} = $this->input->post('wd_yes_no_' . $i . '_AM');
+            }
+        } else {
+            for ($i = 1; $i <= 21; $i++) {
+                ${'wd_yes_no_' . $i} = $this->input->post('wd_yes_no_' . $i . '_AE');
+                // print_r(${'wd_yes_no_' . $i});
+            }
+        }
+     
+
+        $data_fields = [];
+        $wd_yes_no_fields = [];
+        
+        for ($i = 1; $i <= 21; $i++) {
+            $data_fields[] = 'data' . $i;
+            $wd_yes_no_fields[] = 'wd_yes_no_' . $i;
+        }
+        // print_r($data_fields);
+        // print_r($wd_yes_no_fields);
+        
+        $select_query = "SELECT * FROM inward_remittance WHERE buyer_order_id='" . $bo_id . "' AND act_pro='" . $act_pro . "' AND company_id='" . $company_id . "'";
+        $select_result = $this->db->query($select_query);
+        $select = $select_result->row();
+        
+   
+        if ($select) {
+            $login_user_dcode = json_decode($select->login_user_id);
+        
+            if (is_array($login_user_dcode) && in_array($user_id, $login_user_dcode)) {
+               // echo "User ID $user_id exist in login_user_id array.";
+                $update_data = [];
+                foreach ($data_fields as $i => $data_field) {
+                    $wd_yes_no_field = $wd_yes_no_fields[$i];
+                    
+                    $existing_data = json_decode($select->$data_field, true);
+                    
+                    
+                    foreach ($existing_data as &$item) {
+                        if ($item['user_id'] == $user_id) {
+                            $new_value = ${$wd_yes_no_field};
+                            $item['value'] = $new_value;
+                            break;
+                        }
+                    }
+                    // print_r($existing_data);
+                    $update_data[$data_field] = json_encode($existing_data);
+                }
+        
+                $update_query = "UPDATE inward_remittance SET ";
+                foreach ($update_data as $field => $value) {
+                    //print_r($field.'='.$value);
+                    $update_query .= "$field='" . $value . "', ";
+                }
+                $update_query = rtrim($update_query, ', ') . " WHERE buyer_order_id='" . $bo_id . "' AND act_pro='" . $act_pro . "' AND company_id='" . $company_id . "'";
+                
+                // print_r($update_query);
+                $result = $this->db->query($update_query);
+            } 
+            else {
+               // echo "User ID $user_id does not exist in login_user_id array.";
+        
+                $merged_data = [];
+                foreach ($data_fields as $i => $data_field) {
+                    $wd_yes_no_field = $wd_yes_no_fields[$i];
+        
+                    $existing_data = json_decode($select->$data_field, true);
+                    $existing_data[] = ['user_id' => $user_id, 'value' => ${$wd_yes_no_field}];
+                    
+                    $merged_data[$data_field] = json_encode($existing_data);
+                }
+        
+                $user_id_merged = json_decode($select->login_user_id, true);
+                $user_id_merged[] = $_SESSION['admindata']['user_id'];
+        
+                $insert_fields = implode(',', $data_fields) . ",login_user_id,workdone_details,created_by";
+                $insert_values = "";
+                foreach ($merged_data as $field => $value) {
+                    $insert_values .= "'" . $value . "', ";
+                }
+                // $insert_values .= "'" . json_encode($user_id_merged) . "', '" . $wd_user_id . "', '" . $created_by . "'";
+                
+                // $insert_query = "INSERT INTO inward_remittance(company_id,date,buyer_order_id,act_pro," . $insert_fields . ") VALUES('" . $company_id . "','" . $date . "','" . $bo_id . "','" . $act_pro . "'," . $insert_values . ")";
+                $update_query = "UPDATE inward_remittance SET ";
+                foreach ($update_data as $field => $value) {
+                    $update_query .= "$field='" . $value . "', ";
+                }
+                $update_query = rtrim($update_query, ', ') . " WHERE buyer_order_id='" . $bo_id . "' AND act_pro='" . $act_pro . "' AND company_id='" . $company_id . "'";
+                
+                $result = $this->db->query($update_query);
+            }
+        } else {
+           // echo "No existing data found. Performing insert operation.";
+            $merged_data = [];
+                foreach ($data_fields as $i => $data_field) {
+                    $wd_yes_no_field = $wd_yes_no_fields[$i];
+        
+                    $existing_data = json_decode($select->$data_field, true);
+                    $existing_data[] = ['user_id' => $user_id, 'value' => ${$wd_yes_no_field}];
+                    
+                    $merged_data[$data_field] = json_encode($existing_data);
+                }
+        
+                $user_id_merged = json_decode($select->login_user_id, true);
+                $user_id_merged[] = $_SESSION['admindata']['user_id'];
+        
+                $insert_fields = implode(',', $data_fields) . ",login_user_id,workdone_details,created_by";
+                $insert_values = "";
+                foreach ($merged_data as $field => $value) {
+                    $insert_values .= "'" . $value . "', ";
+                }
+                $insert_values .= "'" . json_encode($user_id_merged) . "', '" . $wd_user_id . "', '" . $created_by . "'";
+                
+                $insert_query = "INSERT INTO inward_remittance(company_id,date,buyer_order_id,act_pro," . $insert_fields . ") VALUES('" . $company_id . "','" . $date . "','" . $bo_id . "','" . $act_pro . "'," . $insert_values . ")";
+
+                // $update_query = rtrim($update_query, ', ') . " WHERE buyer_order_id='" . $bo_id . "' AND act_pro='" . $act_pro . "' AND company_id='" . $company_id . "'";
+                
+                $result = $this->db->query($insert_query);
+            // Handle insert operation similarly as in the else branch above
+        }
+        if ($result) {
+           echo '1';
+        } else {
+            echo '0';
+        }
+
+    }
+
+	// public function get_buyer_order_by_comp_id(){
+
+	// 	$company_id = $_POST['company_id'];
+
+	// 	$this->db->select('bo.*, , cb.lead_name, ac.name AS country_name, c.currency_name, c.currency_code, c.currency_symbol');
+	// 	$this->db->from('buyer_order bo');
+	// 	$this->db->leftJoin('currency c', 'bo.currency_id = c.currency_id');
+	// 	$this->db->leftJoin('contact_book cb', 'cb.contact_book_id = l.contact_book_id');
+	// 	$this->db->leftJoin('ad_countries ac', 'cb.country = ac.id');
+	// 	$this->db->where('bo.status !=', 2);
+	// 	$this->db->where('bo.exporter_id', $company_id);
+	// 	$this->db->order_by('bo.buyer_order_id', 'DESC');
+
+	// 	$buyer_order_by_comp_list = $this->db->get()->result_array();
+
+	// 	echo json_encode($buyer_order_by_comp_list);
+	// 	exit;
+
+
+    //     $option = '<option value="">Choose Buyer Order</option>';
+    //     if (isset($buyer_order_by_comp_list)) {
+    //         foreach ($buyer_order_by_comp_list as $list) {
+    //             $val = "";
+    //             if ($buyer_order_id == $list['buyer_order_id']) {
+    //                 $val = "selected";
+    //             }
+    //             $option .= '<option value="' . $list['buyer_order_id'] . '" ' . $val . ' >' . $list['buyer_order_invoice_no'] . '-' . $list['country_name'] .'-' . $list['lead_name']. '</option>';
+
+    //         }
+    //     } else {
+    //         $option = "<option value=''>Choose Buyer Order</option>";
+    //     }
+    //     echo $option;
+
+
+	// 	// $ledger_group_head_list = $this->Voucher_model->ledger_group_head_list($company_id);
+
+    //     // $option = '<option value="">Choose Ledger Heads</option>';
+    //     // if (isset($ledger_group_head_list)) {
+
+    //     //     // print_r($ledger_group_head_list);
+    //     //     foreach ($ledger_group_head_list as $i => $val) {
+
+    //     //         echo $val;
+
+    //     //         $option .= '<optgroup label="' . $val['ledger_group_name'] . '">';
+
+    //     //         foreach ($val['ledger_head_list'] as $key => $lt) {
+
+    //     //             $option .= '<option value="' . $lt['ledger_head_id'] . '">' . $lt['ledger_head_name'] . '</option>';
+
+    //     //         }
+    //     //         $option .= '</optgroup>';
+
+    //     //     }
+    //     // } else {
+    //     //     $option = "<option value=''>Choose Ledger Heads</option>";
+    //     // }
+
+    //     // echo $option;
+
+
+	// }
+
+	
+    public function get_eefc_details_by_comp_bank()
+    {
+        $company_id = $_POST['company_id'];
+        $bank_id = $_POST['bank_id'];
+
+        $fd_details = $this->Voucher_model->get_eefc_list_by_bank($company_id, $bank_id);
+
+        $option = '<option value="">Choose EEFC</option>';
+        if (isset($fd_details)) {
+            foreach ($fd_details as $fdlist) {
+                $val = "";
+               
+                $option .= '<option value="' . $fdlist['eefc_id'] . '" ' . $val . ' >' . $fdlist['eefc_manual_no'] . ' - ' . $fdlist['eefc_no'] .  '</option>';
+
+            }
+        } else {
+            $option = "<option value=''>Choose EEFC</option>";
+        }
+
+        echo $option;
+
+    }
+
+
+	public function get_buyer_details_by_comp_id()
+	{
+		$company_id = $_POST['company_id'];
+		
+
+		$fd_details = $this->db->query("SELECT bo.*
+		,e.exporter_name,cb.lead_name,pis.pi_stage,ac.name as country_name,c.currency_name,c.currency_code,c.currency_symbol
+		from buyer_order bo, exporter e, leads l, pi_stage pis,ad_countries ac, currency c,contact_book cb
+		where bo.exporter_id = e.exporter_id AND bo.currency_id = c.currency_id AND bo.lead_id = l.lead_id AND cb.contact_book_id = l.contact_book_id AND bo.pi_stage_id = pis.pi_stage_id AND cb.country = ac.id AND bo.status!='2' and bo.is_complete != 2 and bo.exporter_id='".$company_id."' order by bo.buyer_order_id desc")->result_array();
+
+		$option = '<option value="">Choose Buyer Order</option>';
+		if (isset($fd_details)) {
+			foreach ($fd_details as $fdlist) {
+				$val = "";
+			
+				$option .= '<option value="' . $fdlist['buyer_order_id'] . '" ' . $val . ' >' . $fdlist['order_no'] . ' - ' . $fdlist['buyer_order_invoice_no'] .' - ' . $fdlist['country_name'] .' - ' . $fdlist['lead_name'] .  '</option>';
+
+			}
+		} else {
+			$option = "<option value=''>Choose Buyer Order</option>";
+		}
+
+		echo $option;
+
+	}
+
+    public function get_gst()
+	{
+
+		$gst_details = $this->db->query("SELECT gst.*
+		from gst
+		where gst.status != 2 order by gst.gst_value asc")->result_array();
+
+		$option = '<option value="">Choose GST</option>';
+		if (isset($gst_details)) {
+			foreach ($gst_details as $gstlist) {
+				$val = "";
+			
+				$option .= '<option value="' . $gstlist['gst_value'] . '" ' . $val . ' >' . $gstlist['gst_value'] .'% </option>';
+
+			}
+		} else {
+			$option = "<option value=''>Choose GST</option>";
+		}
+
+		echo $option;
+
+	}
+
+    public function get_tds()
+	{
+
+		$gst_details = $this->db->query("SELECT tds.*
+		from tds
+		where tds.status != 2 order by tds.tds_value asc")->result_array();
+
+		$option = '<option value="">Choose TDS</option>';
+		if (isset($gst_details)) {
+			foreach ($gst_details as $gstlist) {
+				$val = "";
+			
+				$option .= '<option value="' . $gstlist['tds_value'] . '" ' . $val . ' >' . $gstlist['tds_value'] .'% </option>';
+
+			}
+		} else {
+			$option = "<option value=''>Choose TDS</option>";
+		}
+
+		echo $option;
+
+	}
+
+    public function get_bank_details_from_comp_eefc()
+    {
+        $company_id = $_POST['company_id'];
+        $bank_details_id = $_POST['bank_details_id'];
+
+        $bank_details_company_list = $this->Voucher_model->get_bank_details_from_comp($company_id);
+
+        $option = '<option value="">Select Bank</option>';
+        if (isset($bank_details_company_list)) {
+            foreach ($bank_details_company_list as $list) {
+                $val = "";
+                if ($bank_details_id == $list['bank_detail_id']) {
+                    $val = "selected";
+                }
+                $option .= '<option value="' . $list['bank_detail_id'] . '" ' . $val . ' >' . $list['bank_label'] . '</option>';
+
+            }
+        } else {
+            $option = "<option value=''>Select Bank</option>";
+        }
+        echo $option;
+        // print_r($option);exit;
+        // $this->load->view('ledger_heads/ledger_heads_add',$option);
+    }
+	
+
+}
